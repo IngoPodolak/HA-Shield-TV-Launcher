@@ -3,6 +3,8 @@
 set -u
 DEST="app/src/main/assets/backgrounds"
 mkdir -p "$DEST/thumbs"
+CONV=$(command -v magick || command -v convert)
+echo "Bildwerkzeug: $CONV"
 LIST="["
 n=0
 while read -r id; do
@@ -12,7 +14,7 @@ while read -r id; do
   url="https://images.unsplash.com/${id}?w=2560&q=80&fm=jpg&fit=crop&crop=entropy&ar=16:9"
   if curl -sfL --max-time 60 -o "$DEST/$num.jpg" "$url" && file "$DEST/$num.jpg" | grep -qi jpeg \
      && [[ $(stat -c%s "$DEST/$num.jpg") -gt 60000 ]]; then
-    convert "$DEST/$num.jpg" -resize 480x270^ -gravity center -extent 480x270 -quality 75 "$DEST/thumbs/$num.jpg"
+    $CONV "$DEST/$num.jpg" -resize 480x270^ -gravity center -extent 480x270 -quality 75 "$DEST/thumbs/$num.jpg"
     [[ $n -gt 0 ]] && LIST+=","
     LIST+="{\"id\":\"$num\",\"name\":\"Landschaft $((n + 1))\",\"src\":\"$id\"}"
     n=$((n + 1))

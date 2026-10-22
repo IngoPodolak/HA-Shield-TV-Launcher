@@ -12,10 +12,10 @@
     popupEnabled: true, popupPos: 'tr', popupSize: 'm', popupSeconds: 30, popupCam: 'live',
     favorites: [],
     haUrl: 'http://192.168.0.5:8123', haUrlAlt: ['https://homeassistant.podolan.de', 'http://homeassistant.local:8123'],
-    lightEntity: 'light.wohnzimmer_licht', fanEntity: '',
+    lightEntity: 'light.wohnzimmer_licht', fanEntity: 'fan.deckenventilator',
     cameraEntity: 'camera.reolink_doorbell_fliessend', doorbellEntity: 'binary_sensor.reolink_doorbell_besucher',
     dishEntity: 'sensor.siemens_dishwasher_verbleibende_programmlaufzeit', dishStartEntity: 'sensor.siemens_dishwasher_start_in', dishStatusEntity: '',
-    ovenEntity: 'sensor.bosch_384050532704003972_001_bsh_common_option_remainingprogramtimeestimationstate', ovenStartEntity: '', ovenStatusEntity: '',
+    ovenEntity: 'sensor.bosch_384050532704003972_001_bsh_common_option_remainingprogramtime', ovenStartEntity: '', ovenStatusEntity: '',
     lightName: 'Wohnzimmer', fanName: 'Ventilator', cameraName: 'Haustür'
   };
   const KNOWN_URLS = ['http://192.168.0.5:8123', 'https://homeassistant.podolan.de', 'http://homeassistant.local:8123'];

@@ -26,7 +26,9 @@ object Config {
         .put("doorbellEntity", "binary_sensor.reolink_doorbell_besucher")
         .put("dishEntity", "sensor.siemens_dishwasher_verbleibende_programmlaufzeit")
         .put("dishStartEntity", "sensor.siemens_dishwasher_start_in")
-        .put("ovenEntity", "sensor.bosch_384050532704003972_001_bsh_common_option_remainingprogramtimeestimationstate")
+        .put("ovenEntity", "sensor.bosch_384050532704003972_001_bsh_common_option_remainingprogramtime")
+        .put("fanEntity", "fan.deckenventilator")
+        .put("fanName", "Ventilator")
         .put("lightName", "Wohnzimmer")
         .put("cameraName", "Haustür")
 

@@ -15,14 +15,16 @@ object Backgrounds {
             val txt = ctx.assets.open("backgrounds/list.json").bufferedReader().readText()
             val arr = JSONArray(txt)
             val existing = (ctx.assets.list("backgrounds") ?: emptyArray()).toSet()
+            val thumbs = (ctx.assets.list("backgrounds/thumbs") ?: emptyArray()).toSet()
             val out = JSONArray()
             for (i in 0 until arr.length()) {
                 val o = arr.getJSONObject(i)
                 val file = o.getString("id") + ".jpg"
                 if (file in existing) {
+                    val url = "file:///android_asset/backgrounds/$file"
                     out.put(JSONObject().put("id", o.getString("id")).put("name", o.optString("name"))
-                        .put("url", "file:///android_asset/backgrounds/$file")
-                        .put("thumb", "file:///android_asset/backgrounds/thumbs/$file"))
+                        .put("url", url)
+                        .put("thumb", if (file in thumbs) "file:///android_asset/backgrounds/thumbs/$file" else url))
                 }
             }
             out.toString()
