@@ -11,14 +11,29 @@
     smart: 'on', camPreview: 'live', appliances: 'on',
     popupEnabled: true, popupPos: 'tr', popupSize: 'm', popupSeconds: 30, popupCam: 'live',
     favorites: [],
-    haUrl: 'http://192.168.0.5:8123', haUrlAlt: ['https://homeassistant.podolan.de', 'http://homeassistant.local:8123'],
+    haHost: '192.168.0.5', haPort: 80,
+    haUrl: 'http://192.168.0.5', haUrlAlt: ['https://homeassistant.podolan.de', 'http://homeassistant.local'],
     lightEntity: 'light.wohnzimmer_licht', fanEntity: 'fan.deckenventilator',
     cameraEntity: 'camera.reolink_doorbell_fliessend', doorbellEntity: 'binary_sensor.reolink_doorbell_besucher',
     dishEntity: 'sensor.siemens_dishwasher_verbleibende_programmlaufzeit', dishStartEntity: 'sensor.siemens_dishwasher_start_in', dishStatusEntity: '',
     ovenEntity: 'sensor.bosch_384050532704003972_001_bsh_common_option_remainingprogramtime', ovenStartEntity: '', ovenStatusEntity: '',
     lightName: 'Wohnzimmer', fanName: 'Ventilator', cameraName: 'Haustür'
   };
-  const KNOWN_URLS = ['http://192.168.0.5:8123', 'https://homeassistant.podolan.de', 'http://homeassistant.local:8123'];
+  const HOSTS = ['192.168.0.5', 'homeassistant.local', 'homeassistant.podolan.de'];
+  const PORTS = [[80, '80 (http)'], [8123, '8123 (http)'], [443, '443 (https)']];
+  /** Externe Domains (über Cloudflare) laufen immer über https ohne Port. */
+  const isExternal = (host) => !/^\d+\.\d+\.\d+\.\d+$/.test(host) && !/\.local$/.test(host);
+  function buildUrl(host, port) {
+    port = Number(port);
+    if (isExternal(host) || port === 443) return 'https://' + host + (port === 443 || isExternal(host) ? '' : ':' + port);
+    return 'http://' + host + (port === 80 ? '' : ':' + port);
+  }
+  function applyHaAddress() {
+    const main = buildUrl(cfg.haHost, cfg.haPort);
+    const alt = HOSTS.filter((h) => h !== cfg.haHost).map((h) => buildUrl(h, cfg.haPort));
+    saveCfg({ haUrl: main, haUrlAlt: alt });
+    connectHa();
+  }
   const ENTITY_ROWS = [
     { key: 'lightEntity', label: 'Licht', domains: ['light', 'switch'], words: ['wohnzimmer'] },
     { key: 'fanEntity', label: 'Deckenventilator', domains: ['fan', 'switch', 'light'], words: ['ventil', 'fan', 'decke'] },
@@ -31,9 +46,11 @@
     { key: 'ovenStatusEntity', label: 'Backofen Betriebszustand', domains: ['sensor', 'binary_sensor', 'select'], words: ['bosch', 'oven', 'ofen', 'operation', 'status', 'zustand'] }
   ];
   let cfg = {};
+  let needAddressMigration = false;
   function loadCfg() {
     let raw = {};
     try { raw = JSON.parse(Android.getConfig() || '{}'); } catch (e) {}
+    needAddressMigration = raw.haPort === undefined;
     cfg = Object.assign({}, DEF, raw);
   }
   function saveCfg(patch) {
@@ -45,14 +62,16 @@
     { section: 'Home Assistant' },
     { act: 'login', label: 'Am Fernseher anmelden', icon: 'power', value: () => HA.status },
     { act: 'setup', label: 'Mit dem Handy anmelden (QR-Code)', icon: 'phone', value: () => '' },
-    { key: 'haUrl', label: 'Adresse', opts: KNOWN_URLS.map((u) => [u, u.replace(/^https?:\/\//, '')]) },
+    { key: 'haHost', label: 'Adresse', opts: HOSTS.map((h) => [h, h]) },
+    { key: 'haPort', label: 'Port', opts: PORTS },
+    { act: 'none', label: 'Wird verwendet', value: () => (HA.url || cfg.haUrl).replace(/^https?:\/\//, '') },
     { section: 'Geräte' }
   ].concat(ENTITY_ROWS.map((e) => ({ act: 'entity', entity: e, label: e.label, value: () => entityLabel(cfg[e.key]) }))).concat([
     { section: 'Darstellung' },
     { key: 'layout', label: 'Layout', opts: [['dock', 'Dock'], ['list', 'Liste']] },
     { key: 'material', label: 'Material', opts: [['clear', 'Klar getönt'], ['frost', 'Milchglas'], ['dark', 'Dunkel getönt'], ['none', 'Ohne']] },
     { key: 'focus', label: 'Fokus', opts: [['glass', 'Glas'], ['glow', 'Leuchten'], ['lift', 'Vergrößern'], ['outline', 'Rahmen']] },
-    { key: 'iconStyle', label: 'App-Symbole', opts: [['white', 'Weiß'], ['color', 'Farbig']] },
+    { key: 'iconStyle', label: 'App-Symbole', opts: [['white', 'Weißes Logo'], ['color', 'Farbig'], ['banner', 'TV-Banner']] },
     { key: 'labels', label: 'App-Namen im Dock', opts: [['on', 'Anzeigen'], ['off', 'Ausblenden']] },
     { key: 'clock', label: 'Uhr', opts: [['24', '24 Std.'], ['12', '12 Std.'], ['off', 'Aus']] },
     { key: 'date', label: 'Datum', opts: [['on', 'An'], ['off', 'Aus']] },
@@ -160,9 +179,11 @@
     return apps.filter((a) => score(a) < 99).sort((a, b) => score(a) - score(b)).slice(0, 10)
       .concat(apps.filter((a) => score(a) === 99)).slice(0, 10);
   }
-  function appIcon(a) {
-    if (!(a.pkg in iconCache)) { try { iconCache[a.pkg] = Android.getIcon(a.pkg) || ''; } catch (e) { iconCache[a.pkg] = ''; } }
-    const src = iconCache[a.pkg];
+  function appIcon(a, forceStyle) {
+    const style = forceStyle || ({ white: 'mono', color: 'color', banner: 'banner' }[cfg.iconStyle] || 'mono');
+    const key = a.pkg + '|' + style;
+    if (!(key in iconCache)) { try { iconCache[key] = Android.getIcon(a.pkg, style) || ''; } catch (e) { iconCache[key] = ''; } }
+    const src = iconCache[key];
     if (src) return h('img', { src });
     return h('div', { class: 'mono', text: a.label.replace(/[^A-Za-z0-9ÄÖÜäöü]/g, '').slice(0, 1).toUpperCase() });
   }
@@ -392,11 +413,8 @@
     openModal(sheet, { side: true, refresh: () => rows.forEach((r) => r._upd()) });
   }
   function onCfgChanged(key) {
-    if (key === 'haUrl') {
-      const alt = KNOWN_URLS.filter((u) => u !== cfg.haUrl);
-      saveCfg({ haUrlAlt: alt });
-      connectHa();
-    }
+    if (key === 'haHost' || key === 'haPort') applyHaAddress();
+    if (key === 'iconStyle') for (const k in iconCache) delete iconCache[k];
     applyCfg();
     if (key === 'layout') { dockOffset = 0; listOffset = 0; renderApps(); }
     if (key === 'iconStyle' || key === 'labels' || key === 'textSize') renderApps();
@@ -404,6 +422,7 @@
     if (key === 'camPreview' || key === 'smart' || key === 'appliances') { renderSmart(true); renderStatus(); }
   }
   function settingsAction(a, s) {
+    if (a === 'none') return;
     if (a === 'login') { toast('Anmeldeseite von Home Assistant wird geöffnet …'); Android.login(HA.url || cfg.haUrl); }
     else if (a === 'entity') openEntityPicker(s.entity);
     else if (a === 'bgpicker') openBgPicker();
@@ -869,6 +888,8 @@
       b._act = () => (a === 'art' ? enterArt() : a === 'allapps' ? openAllApps() : openSettings());
     });
     loadCfg(); applyCfg();
+    if (needAddressMigration) saveCfg({ haHost: cfg.haHost, haPort: cfg.haPort, haUrl: buildUrl(cfg.haHost, cfg.haPort),
+      haUrlAlt: HOSTS.filter((x) => x !== cfg.haHost).map((x) => buildUrl(x, cfg.haPort)) });
     loadApps(); renderApps();
     loadBackgroundLists(); startBg(true);
     connectHa(); renderSmart(true); renderStatus();

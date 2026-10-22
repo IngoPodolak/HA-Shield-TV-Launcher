@@ -148,7 +148,7 @@ object SetupServer {
                         else json(out, 200, e)
                     }
                     r.path == "/api/icon" -> {
-                        val png = Apps.iconPng(app, r.query["pkg"] ?: "", false)
+                        val png = Apps.iconPng(app, r.query["pkg"] ?: "", "color")
                         if (png == null) send(out, 404, "text/plain", ByteArray(0)) else send(out, 200, "image/png", png)
                     }
                     r.path == "/api/backgrounds" -> json(out, 200, Backgrounds.customJson(app))

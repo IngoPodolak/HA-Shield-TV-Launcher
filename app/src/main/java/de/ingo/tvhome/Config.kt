@@ -19,8 +19,8 @@ object Config {
 
     /** Voreinstellungen für Ingos Haus. Alles lässt sich im Menü oder am Handy ändern. */
     private val DEFAULTS = JSONObject()
-        .put("haUrl", "http://192.168.0.5:8123")
-        .put("haUrlAlt", org.json.JSONArray().put("https://homeassistant.podolan.de").put("http://homeassistant.local:8123"))
+        .put("haUrl", "http://192.168.0.5")
+        .put("haUrlAlt", org.json.JSONArray().put("https://homeassistant.podolan.de").put("http://homeassistant.local"))
         .put("lightEntity", "light.wohnzimmer_licht")
         .put("cameraEntity", "camera.reolink_doorbell_fliessend")
         .put("doorbellEntity", "binary_sensor.reolink_doorbell_besucher")

@@ -119,7 +119,16 @@ body.layout-list #topicons { display: none; }
 .app.focused { color: #fff; }
 body.labels-off .app .lbl { display: none; }
 body.labels-off .app .ico { width: 3.6vw; height: 3.6vw; }
-body.icons-white .ico img { filter: brightness(0) invert(1); }
+body.icons-white .app .ico img { filter: drop-shadow(0 1px 6px rgba(0,0,0,.25)); }
+/* TV-Banner: breite Bilder statt Symbol, Name steht schon im Banner */
+body.icons-banner .app { gap: .4vw; }
+body.icons-banner .app .ico { width: 11.6vw; height: 6.5vw; }
+body.icons-banner .app .ico img { width: 100%; height: 100%; object-fit: cover; border-radius: .7vw; }
+body.icons-banner .app .lbl { display: none; }
+body.icons-banner .litem .ico { width: 4.1vw; height: 2.3vw; }
+body.icons-banner .litem .ico img { object-fit: cover; border-radius: .35vw; }
+body.icons-banner .tile .ico { width: 9vw; height: 5vw; }
+body.icons-banner .tile .ico img { object-fit: cover; border-radius: .6vw; }
 .mono {
   width: 100%; height: 100%; border-radius: 22%; display: flex; align-items: center; justify-content: center;
   font-weight: 500; font-size: 1.5vw; background: rgba(255,255,255,.14);

@@ -49,7 +49,7 @@
   <section>
     <h2><span class="n">1</span>Home Assistant verbinden</h2>
     <label for="haUrl">Adresse von Home Assistant</label>
-    <input id="haUrl" type="url" list="haUrls" placeholder="http://192.168.0.5:8123" autocomplete="off">
+    <input id="haUrl" type="url" list="haUrls" placeholder="http://192.168.0.5" autocomplete="off">
     <datalist id="haUrls"></datalist>
     <div class="hint">Die IP-Adresse im Heimnetz ist am zuverlässigsten. Fällt sie aus, nutzt der Fernseher automatisch die anderen Adressen.</div>
     <div class="hint" id="tokenHint"></div>
@@ -133,7 +133,7 @@
       cfg = s.config; apps = s.apps;
       $('haUrl').value = cfg.haUrl || '';
       $('haUrls').innerHTML = '';
-      (s.haUrls || []).concat(['http://192.168.0.5:8123', 'https://homeassistant.podolan.de', 'http://homeassistant.local:8123'])
+      (s.haUrls || []).concat(['http://192.168.0.5', 'https://homeassistant.podolan.de', 'http://homeassistant.local'])
         .filter((u, i, a) => a.indexOf(u) === i).forEach((u) => $('haUrls').appendChild(new Option(u, u)));
       const q = new URLSearchParams(location.search);
       $('tokenHint').textContent = cfg.hasToken ? 'Ein Token ist gespeichert. Leer lassen, um es zu behalten.' : '';

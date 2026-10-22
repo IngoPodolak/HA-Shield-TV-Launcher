@@ -14,8 +14,9 @@ class Bridge(private val activity: MainActivity) {
     @JavascriptInterface fun getConfig(): String = Config.get(ctx).toString()
     @JavascriptInterface fun saveConfig(patch: String) { try { Config.merge(ctx, JSONObject(patch)) } catch (_: Exception) {} }
     @JavascriptInterface fun getApps(): String = Apps.listJson(ctx)
-    @JavascriptInterface fun getIcon(pkg: String): String = Apps.iconDataUrl(ctx, pkg, false)
-    @JavascriptInterface fun getBanner(pkg: String): String = Apps.iconDataUrl(ctx, pkg, true)
+    @JavascriptInterface fun getIcon(pkg: String, style: String): String = Apps.iconDataUrl(ctx, pkg, style)
+    @JavascriptInterface fun getIconColor(pkg: String): String = Apps.iconDataUrl(ctx, pkg, "color")
+    @JavascriptInterface fun getBanner(pkg: String): String = Apps.iconDataUrl(ctx, pkg, "banner")
     @JavascriptInterface fun launch(pkg: String): Boolean = Apps.launch(ctx, pkg)
     @JavascriptInterface fun version(): String = BuildConfig.VERSION_NAME
 
