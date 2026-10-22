@@ -1,0 +1,50 @@
+<!doctype html>
+<html lang="de">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, user-scalable=no">
+<title>TV Home</title>
+<link rel="stylesheet" href="app.css">
+</head>
+<body class="layout-dock mat-clear focus-glass icons-white">
+  <div id="bg">
+    <div class="bg-layer" id="bgA"></div>
+    <div class="bg-layer" id="bgB"></div>
+  </div>
+  <div id="shade"></div>
+
+  <div id="ui">
+    <div id="clockbox">
+      <div id="clock">--:--</div>
+      <div id="date"></div>
+    </div>
+    <div id="status"></div>
+
+    <div id="topicons">
+      <div class="iconbtn" data-f data-act="art" title="Art Mode"></div>
+      <div class="iconbtn" data-f data-act="allapps" title="Alle Apps"></div>
+      <div class="iconbtn" data-f data-act="settings" title="Einstellungen"></div>
+    </div>
+
+    <div id="smart" class="glass"></div>
+
+    <div id="dock" class="glass"><div id="docktrack"></div></div>
+    <div id="list"><div id="listtrack"></div></div>
+
+    <div id="links">
+      <div class="link" data-f data-act="art">Art Mode</div>
+      <div class="link" data-f data-act="allapps">Alle Apps</div>
+      <div class="link" data-f data-act="settings">Einstellungen</div>
+    </div>
+  </div>
+
+  <div id="artclock"><div id="artclock-time"></div><div id="artclock-date"></div><div id="artclock-info"></div></div>
+  <div id="modals"></div>
+  <div id="toast"></div>
+
+  <script src="icons.js"></script>
+  <script src="mock.js"></script>
+  <script src="ha.js"></script>
+  <script src="app.js"></script>
+</body>
+</html>

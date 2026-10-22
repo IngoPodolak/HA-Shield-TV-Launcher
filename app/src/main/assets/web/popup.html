@@ -1,0 +1,56 @@
+<!doctype html>
+<html lang="de">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<style>
+  html, body { margin: 0; height: 100%; background: transparent; overflow: hidden; }
+  body { font-family: "Google Sans", Roboto, system-ui, sans-serif; color: #fff; }
+  .box {
+    position: absolute; inset: 0; border-radius: 18px; overflow: hidden;
+    background: rgba(18, 18, 22, .92); border: 2px solid #f3c76b;
+    display: flex; flex-direction: column;
+    animation: in .35s cubic-bezier(.2,.8,.2,1);
+  }
+  @keyframes in { from { transform: translateY(-12px) scale(.97); opacity: 0; } to { transform: none; opacity: 1; } }
+  .head { display: flex; align-items: center; gap: 10px; padding: 0 14px; height: 48px; font-size: 18px; font-weight: 500; flex: none; }
+  .head svg { width: 24px; height: 24px; color: #f3c76b; animation: ring 1s ease-in-out 3; }
+  @keyframes ring { 0%,100% { transform: rotate(0); } 20% { transform: rotate(14deg); } 40% { transform: rotate(-12deg); } 60% { transform: rotate(8deg); } 80% { transform: rotate(-4deg); } }
+  .cam { flex: 1; background: #000; position: relative; }
+  .cam img { width: 100%; height: 100%; object-fit: cover; display: block; }
+  .cam .none { position: absolute; inset: 0; display: flex; align-items: center; justify-content: center; opacity: .6; font-size: 15px; }
+  .live { position: absolute; left: 10px; top: 10px; background: #e5483d; font-size: 12px; padding: 2px 7px; border-radius: 4px; font-weight: 500; }
+  .bar { position: absolute; left: 0; bottom: 0; height: 4px; background: #f3c76b; width: 100%; transform-origin: left; }
+</style>
+</head>
+<body>
+<div class="box">
+  <div class="head">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M10 5a2 2 0 1 1 4 0 7 7 0 0 1 4 6v3l2 3H4l2-3v-3a7 7 0 0 1 4-6"/><path d="M9 17v1a3 3 0 0 0 6 0v-1"/></svg>
+    <span id="title"></span>
+  </div>
+  <div class="cam" id="cam"><div class="bar" id="bar"></div></div>
+</div>
+<script>
+  const q = new URLSearchParams(location.search);
+  document.getElementById('title').textContent = q.get('t') || 'Es klingelt';
+  const src = q.get('src');
+  const secs = Number(q.get('s')) || 30;
+  const cam = document.getElementById('cam');
+  if (src) {
+    const img = new Image();
+    img.src = src;
+    cam.insertBefore(img, cam.firstChild);
+    const live = document.createElement('div'); live.className = 'live'; live.textContent = 'LIVE'; cam.appendChild(live);
+    if (src.indexOf('/camera_proxy/') >= 0) {
+      setInterval(() => { img.src = src + '&_=' + Date.now(); }, 1500);
+      live.textContent = 'BILD';
+    }
+  } else {
+    const n = document.createElement('div'); n.className = 'none'; n.textContent = 'Kein Kamerabild'; cam.appendChild(n);
+  }
+  const bar = document.getElementById('bar');
+  bar.animate([{ transform: 'scaleX(1)' }, { transform: 'scaleX(0)' }], { duration: secs * 1000, fill: 'forwards', easing: 'linear' });
+</script>
+</body>
+</html>

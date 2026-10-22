@@ -1,0 +1,288 @@
+<!doctype html>
+<html lang="de">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>TV Home einrichten</title>
+<style>
+  :root { --bg: #f4f3ef; --card: #fff; --text: #1d1d1f; --muted: #6b6b70; --line: rgba(0,0,0,.1); --accent: #2f6fed; --ok: #2c9b5a; --err: #d23f31; }
+  @media (prefers-color-scheme: dark) { :root { --bg: #111113; --card: #1c1c1f; --text: #f2f2f4; --muted: #9a9aa2; --line: rgba(255,255,255,.1); --accent: #6b9bff; --ok: #4fc483; --err: #ff6b5e; } }
+  * { box-sizing: border-box; }
+  body { margin: 0; background: var(--bg); color: var(--text); font: 16px/1.5 system-ui, -apple-system, Roboto, sans-serif; }
+  main { max-width: 640px; margin: 0 auto; padding: 20px 16px 60px; }
+  h1 { font-size: 24px; font-weight: 600; margin: 8px 0 4px; }
+  .lead { color: var(--muted); margin: 0 0 18px; }
+  section { background: var(--card); border: 1px solid var(--line); border-radius: 14px; padding: 16px; margin: 14px 0; }
+  h2 { font-size: 18px; font-weight: 600; margin: 0 0 10px; display: flex; align-items: center; gap: 8px; }
+  h2 .n { width: 24px; height: 24px; border-radius: 50%; background: var(--accent); color: #fff; font-size: 13px; display: inline-flex; align-items: center; justify-content: center; }
+  label { display: block; font-size: 14px; color: var(--muted); margin: 12px 0 4px; }
+  input[type=text], input[type=password], input[type=url], select {
+    width: 100%; font: inherit; color: var(--text); background: var(--bg);
+    border: 1px solid var(--line); border-radius: 10px; padding: 10px 12px;
+  }
+  button { font: inherit; border: 0; border-radius: 10px; padding: 11px 16px; background: var(--accent); color: #fff; font-weight: 500; margin-top: 14px; }
+  button.sec { background: transparent; color: var(--accent); border: 1px solid var(--line); }
+  .row2 { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+  .hint { font-size: 13px; color: var(--muted); margin-top: 4px; }
+  details { margin-top: 8px; font-size: 14px; color: var(--muted); }
+  details ol { padding-left: 20px; margin: 6px 0; }
+  .msg { margin-top: 10px; font-size: 14px; min-height: 1em; }
+  .msg.ok { color: var(--ok); } .msg.err { color: var(--err); }
+  .apps { list-style: none; padding: 0; margin: 8px 0 0; }
+  .apps li { display: flex; align-items: center; gap: 10px; padding: 8px 4px; border-bottom: 1px solid var(--line); }
+  .apps li img { width: 32px; height: 32px; border-radius: 7px; object-fit: contain; }
+  .apps li .l { flex: 1; }
+  .apps li .mv { display: flex; gap: 4px; }
+  .apps li .mv button { margin: 0; padding: 4px 10px; background: transparent; color: var(--text); border: 1px solid var(--line); }
+  .apps input { width: 20px; height: 20px; }
+  .photos { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; margin-top: 10px; }
+  .photos div { position: relative; aspect-ratio: 16/9; border-radius: 8px; background-size: cover; background-position: center; }
+  .photos button { position: absolute; right: 4px; top: 4px; margin: 0; padding: 2px 8px; font-size: 13px; background: rgba(0,0,0,.6); }
+  .sub { font-size: 15px; font-weight: 600; margin: 18px 0 0; }
+</style>
+</head>
+<body>
+<main>
+  <h1>TV Home einrichten</h1>
+  <p class="lead">Alles, was du hier speicherst, landet sofort auf dem Fernseher.</p>
+
+  <section>
+    <h2><span class="n">1</span>Home Assistant verbinden</h2>
+    <label for="haUrl">Adresse von Home Assistant</label>
+    <input id="haUrl" type="url" placeholder="http://192.168.1.10:8123" autocomplete="off">
+    <div class="hint">Am besten die IP-Adresse im Heimnetz verwenden (homeassistant.local funktioniert auf dem Shield oft nicht).</div>
+    <label for="haToken">Langlebiges Zugriffstoken</label>
+    <input id="haToken" type="password" placeholder="Token einfügen" autocomplete="off">
+    <div class="hint" id="tokenHint"></div>
+    <details>
+      <summary>So bekommst du ein Token</summary>
+      <ol>
+        <li>Home Assistant öffnen, unten links auf deinen Namen (Profil) tippen</li>
+        <li>Reiter „Sicherheit“ öffnen, ganz nach unten scrollen</li>
+        <li>„Langlebige Zugriffstoken“ → „Token erstellen“, Name z. B. „Shield TV“</li>
+        <li>Token kopieren und hier einfügen (es wird nur einmal angezeigt)</li>
+      </ol>
+    </details>
+    <button id="saveHa">Speichern und verbinden</button>
+    <div class="msg" id="haMsg"></div>
+  </section>
+
+  <section id="devSec">
+    <h2><span class="n">2</span>Geräte auswählen</h2>
+    <div class="hint" id="devHint">Erst Home Assistant verbinden, dann erscheinen hier deine Geräte.</div>
+    <div id="devForm" hidden>
+      <div class="sub">Haustür</div>
+      <label for="cameraEntity">Kamera</label><select id="cameraEntity"></select>
+      <label for="doorbellEntity">Klingelknopf (löst das Popup aus)</label><select id="doorbellEntity"></select>
+      <div class="hint">Meist ein „binary_sensor“ oder „event“ deiner Klingel, z. B. „…_ding“, „…_klingel“ oder „…_press“.</div>
+      <label for="cameraName">Anzeigename</label><input id="cameraName" type="text" placeholder="Haustür">
+
+      <div class="sub">Wohnzimmer</div>
+      <label for="lightEntity">Licht</label><select id="lightEntity"></select>
+      <label for="lightName">Anzeigename</label><input id="lightName" type="text" placeholder="Wohnzimmer">
+      <label for="fanEntity">Deckenventilator</label><select id="fanEntity"></select>
+      <label for="fanName">Anzeigename</label><input id="fanName" type="text" placeholder="Ventilator">
+
+      <div class="sub">Küche</div>
+      <label for="dishEntity">Spülmaschine – Restlaufzeit oder Endzeit</label><select id="dishEntity"></select>
+      <label for="dishStatusEntity">Spülmaschine – Betriebszustand (optional)</label><select id="dishStatusEntity"></select>
+      <label for="ovenEntity">Backofen – Restlaufzeit oder Endzeit</label><select id="ovenEntity"></select>
+      <label for="ovenStatusEntity">Backofen – Betriebszustand (optional)</label><select id="ovenStatusEntity"></select>
+      <div class="hint">Die Restlaufzeit wird nur eingeblendet, wenn das Gerät läuft. Ohne Betriebszustand zählt: Restzeit größer als 0.</div>
+
+      <button id="saveDev">Geräte speichern</button>
+      <button id="testPopup" class="sec">Klingel-Popup testen</button>
+      <div class="msg" id="devMsg"></div>
+    </div>
+  </section>
+
+  <section>
+    <h2><span class="n">3</span>Apps in der Leiste</h2>
+    <div class="hint">Haken setzen = erscheint auf der Startseite. Mit ↑ ↓ die Reihenfolge ändern.</div>
+    <ul class="apps" id="apps"></ul>
+    <button id="saveApps">Apps speichern</button>
+    <div class="msg" id="appMsg"></div>
+  </section>
+
+  <section>
+    <h2><span class="n">4</span>Eigene Hintergrundfotos</h2>
+    <div class="hint">Fotos werden automatisch verkleinert und auf den Shield übertragen. Danach am Fernseher unter Einstellungen → Hintergrund auswählen.</div>
+    <input id="files" type="file" accept="image/*" multiple hidden>
+    <button id="pick">Fotos auswählen</button>
+    <div class="msg" id="photoMsg"></div>
+    <div class="photos" id="photos"></div>
+  </section>
+
+  <p class="hint" id="ver"></p>
+</main>
+<script>
+  const PIN = new URLSearchParams(location.search).get('pin') || '';
+  const $ = (id) => document.getElementById(id);
+  const api = (path, opts) => fetch(path + (path.includes('?') ? '&' : '?') + 'pin=' + encodeURIComponent(PIN), opts)
+    .then(async (r) => { const t = await r.text(); let j = {}; try { j = JSON.parse(t); } catch (e) {} if (!r.ok) throw new Error(j.error || ('Fehler ' + r.status)); return j; });
+  const post = (path, body) => api(path, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) });
+  const msg = (id, text, ok) => { const m = $(id); m.textContent = text; m.className = 'msg ' + (ok ? 'ok' : 'err'); };
+
+  let cfg = {}, apps = [], entities = [];
+  const SEL = ['cameraEntity', 'doorbellEntity', 'lightEntity', 'fanEntity', 'dishEntity', 'dishStatusEntity', 'ovenEntity', 'ovenStatusEntity'];
+
+  function load() {
+    api('/api/state').then((s) => {
+      cfg = s.config; apps = s.apps;
+      $('haUrl').value = cfg.haUrl || '';
+      $('tokenHint').textContent = cfg.hasToken ? 'Ein Token ist gespeichert. Leer lassen, um es zu behalten.' : '';
+      ['cameraName', 'lightName', 'fanName'].forEach((k) => ($(k).value = cfg[k] || ''));
+      $('ver').textContent = 'TV Home ' + s.version + (s.overlay ? '' : ' · Hinweis: Popup-Berechtigung fehlt noch');
+      renderApps();
+      if (cfg.haUrl && cfg.hasToken) loadEntities();
+      loadPhotos();
+    }).catch((e) => msg('haMsg', e.message, false));
+  }
+
+  // ---------- Home Assistant
+  $('saveHa').onclick = () => {
+    const url = $('haUrl').value.trim();
+    if (!/^https?:\/\//.test(url)) { msg('haMsg', 'Die Adresse muss mit http:// oder https:// beginnen.', false); return; }
+    msg('haMsg', 'Verbinde …', true);
+    post('/api/config', { haUrl: url, haToken: $('haToken').value.trim() })
+      .then(() => { $('haToken').value = ''; cfg.hasToken = true; $('tokenHint').textContent = 'Ein Token ist gespeichert. Leer lassen, um es zu behalten.'; return loadEntities(); })
+      .then(() => msg('haMsg', 'Verbunden. ' + entities.length + ' Entitäten gefunden.', true))
+      .catch((e) => msg('haMsg', e.message, false));
+  };
+
+  function score(e, kind) {
+    const t = (e.id + ' ' + e.name).toLowerCase();
+    const has = (...w) => w.some((x) => t.includes(x));
+    if (kind === 'doorbell') return (has('klingel', 'doorbell', 'ding', 'ring', 'press', 'button', 'türglocke', 'bell') ? 0 : 5) + (['event', 'binary_sensor'].includes(e.domain) ? 0 : 2);
+    if (kind === 'remain') return (e.dc === 'timestamp' || e.dc === 'duration' || /^(min|h|s)$/.test(e.unit) ? 0 : 3) + (has('rest', 'remain', 'finish', 'fertig', 'ende', 'end', 'program_finish', 'zeit') ? 0 : 3);
+    if (kind === 'status') return has('status', 'state', 'zustand', 'operation', 'betrieb', 'programm') ? 0 : 3;
+    return 0;
+  }
+  const KINDS = {
+    cameraEntity: { domains: ['camera'] },
+    doorbellEntity: { domains: ['binary_sensor', 'event', 'sensor', 'input_boolean', 'switch', 'button'], kind: 'doorbell' },
+    lightEntity: { domains: ['light', 'switch'] },
+    fanEntity: { domains: ['fan', 'switch', 'light'] },
+    dishEntity: { domains: ['sensor'], kind: 'remain', hint: ['spül', 'dish', 'geschirr'] },
+    dishStatusEntity: { domains: ['sensor', 'binary_sensor', 'select'], kind: 'status', hint: ['spül', 'dish', 'geschirr'], optional: true },
+    ovenEntity: { domains: ['sensor'], kind: 'remain', hint: ['ofen', 'oven', 'herd', 'back'] },
+    ovenStatusEntity: { domains: ['sensor', 'binary_sensor', 'select'], kind: 'status', hint: ['ofen', 'oven', 'herd', 'back'], optional: true }
+  };
+  function fillSelects() {
+    SEL.forEach((k) => {
+      const def = KINDS[k], sel = $(k);
+      let list = entities.filter((e) => def.domains.includes(e.domain));
+      const sc = (e) => score(e, def.kind) + (def.hint && !def.hint.some((w) => (e.id + ' ' + e.name).toLowerCase().includes(w)) ? 4 : 0);
+      list.sort((a, b) => sc(a) - sc(b) || a.name.localeCompare(b.name));
+      sel.innerHTML = '';
+      sel.add(new Option(def.optional ? '– keiner –' : '– nicht verwenden –', ''));
+      const sug = document.createElement('optgroup'); sug.label = 'Passend';
+      const all = document.createElement('optgroup'); all.label = 'Alle';
+      list.forEach((e) => {
+        const label = e.name + '  (' + e.id + ')' + (e.state && e.state.length < 24 ? ' · ' + e.state + (e.unit ? ' ' + e.unit : '') : '');
+        (sc(e) <= 1 ? sug : all).appendChild(new Option(label, e.id));
+      });
+      if (sug.children.length) sel.appendChild(sug);
+      sel.appendChild(all);
+      sel.value = cfg[k] || '';
+    });
+  }
+  function loadEntities() {
+    return api('/api/entities').then((list) => {
+      entities = list; fillSelects();
+      $('devForm').hidden = false; $('devHint').hidden = true;
+    });
+  }
+  ['cameraEntity', 'lightEntity', 'fanEntity'].forEach((k) => {
+    $(k).addEventListener('change', () => {
+      const nameKey = k.replace('Entity', 'Name'); const e = entities.find((x) => x.id === $(k).value);
+      if (e && !$(nameKey).value) $(nameKey).value = e.name;
+    });
+  });
+  $('saveDev').onclick = () => {
+    const p = {}; SEL.forEach((k) => (p[k] = $(k).value));
+    ['cameraName', 'lightName', 'fanName'].forEach((k) => (p[k] = $(k).value.trim()));
+    post('/api/config', p).then(() => { Object.assign(cfg, p); msg('devMsg', 'Gespeichert – der Fernseher ist aktualisiert.', true); })
+      .catch((e) => msg('devMsg', e.message, false));
+  };
+  $('testPopup').onclick = () => post('/api/test-popup', {}).then((r) =>
+    msg('devMsg', r.overlay ? 'Popup ausgelöst – schau auf den Fernseher.' : 'Die Popup-Berechtigung fehlt noch (wird bei der Installation per Befehl gesetzt).', r.overlay))
+    .catch((e) => msg('devMsg', e.message, false));
+
+  // ---------- Apps
+  let order = [];
+  function renderApps() {
+    const fav = (cfg.favorites && cfg.favorites.length) ? cfg.favorites.filter((p) => apps.some((a) => a.pkg === p)) : [];
+    order = fav.concat(apps.map((a) => a.pkg).filter((p) => !fav.includes(p)));
+    const checked = new Set(fav);
+    const ul = $('apps'); ul.innerHTML = '';
+    order.forEach((pkg, i) => {
+      const a = apps.find((x) => x.pkg === pkg);
+      const li = document.createElement('li');
+      li.innerHTML = '<input type="checkbox"><img alt=""><span class="l"></span><span class="mv"><button>↑</button><button>↓</button></span>';
+      li.querySelector('input').checked = checked.has(pkg);
+      li.querySelector('img').src = '/api/icon?pkg=' + encodeURIComponent(pkg) + '&pin=' + PIN;
+      li.querySelector('.l').textContent = a.label;
+      li.dataset.pkg = pkg;
+      const [up, down] = li.querySelectorAll('.mv button');
+      up.onclick = () => { if (li.previousElementSibling) ul.insertBefore(li, li.previousElementSibling); };
+      down.onclick = () => { if (li.nextElementSibling) ul.insertBefore(li.nextElementSibling, li); };
+      ul.appendChild(li);
+    });
+  }
+  $('saveApps').onclick = () => {
+    const fav = Array.from($('apps').children).filter((li) => li.querySelector('input').checked).map((li) => li.dataset.pkg);
+    if (!fav.length) { msg('appMsg', 'Bitte mindestens eine App auswählen.', false); return; }
+    post('/api/config', { favorites: fav }).then(() => { cfg.favorites = fav; msg('appMsg', 'Gespeichert.', true); })
+      .catch((e) => msg('appMsg', e.message, false));
+  };
+
+  // ---------- Fotos
+  $('pick').onclick = () => $('files').click();
+  $('files').onchange = async () => {
+    const files = Array.from($('files').files);
+    let n = 0;
+    for (const f of files) {
+      msg('photoMsg', 'Übertrage ' + (n + 1) + ' von ' + files.length + ' …', true);
+      try {
+        const blob = await shrink(f);
+        await fetch('/api/background?name=' + encodeURIComponent(f.name) + '&pin=' + PIN, { method: 'POST', body: blob })
+          .then((r) => { if (!r.ok) throw new Error('Upload fehlgeschlagen'); });
+        n++;
+      } catch (e) { msg('photoMsg', f.name + ': ' + e.message, false); }
+    }
+    if (n) msg('photoMsg', n + ' Foto(s) übertragen.', true);
+    $('files').value = '';
+    loadPhotos();
+  };
+  function shrink(file) {
+    return new Promise((resolve, reject) => {
+      const img = new Image();
+      img.onload = () => {
+        const max = 2560, s = Math.min(1, max / Math.max(img.width, img.height));
+        const c = document.createElement('canvas'); c.width = Math.round(img.width * s); c.height = Math.round(img.height * s);
+        c.getContext('2d').drawImage(img, 0, 0, c.width, c.height);
+        c.toBlob((b) => (b ? resolve(b) : reject(new Error('Bild konnte nicht gelesen werden'))), 'image/jpeg', 0.86);
+        URL.revokeObjectURL(img.src);
+      };
+      img.onerror = () => reject(new Error('Bildformat wird nicht unterstützt'));
+      img.src = URL.createObjectURL(file);
+    });
+  }
+  function loadPhotos() {
+    api('/api/backgrounds').then((list) => {
+      const box = $('photos'); box.innerHTML = '';
+      list.forEach((p) => {
+        const d = document.createElement('div');
+        d.style.backgroundImage = 'url("/bg/' + encodeURIComponent(p.file) + '?pin=' + PIN + '")';
+        const b = document.createElement('button'); b.textContent = 'Löschen';
+        b.onclick = () => post('/api/background/delete?file=' + encodeURIComponent(p.file), {}).then(loadPhotos);
+        d.appendChild(b); box.appendChild(d);
+      });
+    });
+  }
+
+  load();
+</script>
+</body>
+</html>
