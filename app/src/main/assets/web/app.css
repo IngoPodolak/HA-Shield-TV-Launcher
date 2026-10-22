@@ -214,6 +214,8 @@ body.artclock-small #artclock-date { font-size: 1vw; }
 }
 .row .val { display: flex; align-items: center; gap: .4vw; opacity: .75; white-space: nowrap; }
 .row .val .arr { width: 1vw; height: 1vw; opacity: 0; }
+.row .val .txt { max-width: 15vw; overflow: hidden; text-overflow: ellipsis; }
+.row.current .val .arr { opacity: .9; }
 .row.focused .val { opacity: 1; }
 .row.focused .val .arr { opacity: .8; }
 .row .hint { font-size: .8vw; opacity: .55; margin-top: .15vw; }

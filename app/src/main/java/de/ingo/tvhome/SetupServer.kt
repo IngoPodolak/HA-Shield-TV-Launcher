@@ -107,6 +107,18 @@ object SetupServer {
                     val html = app.assets.open("web/setup.html").readBytes()
                     return send(out, 200, "text/html; charset=utf-8", html)
                 }
+                if (r.path == "/auth-callback") {
+                    val state = r.query["state"] ?: ""
+                    val pin = state.substringBefore('|')
+                    val haUrl = state.substringAfter('|', "").trimEnd('/')
+                    val code = r.query["code"] ?: ""
+                    val err = when {
+                        pin != Config.pin(app) -> "PIN passt nicht. Bitte die Anmeldung neu starten."
+                        code.isEmpty() || haUrl.isEmpty() -> "Die Anmeldung wurde abgebrochen."
+                        else -> Auth.finish(app, haUrl, code, "http://" + (r.headers["host"] ?: "127.0.0.1:$PORT") + "/")
+                    }
+                    return send(out, 200, "text/html; charset=utf-8", resultPage(err).toByteArray())
+                }
                 if (!pinOk) return json(out, 403, """{"error":"PIN falsch. Bitte den QR-Code am Fernseher neu scannen."}""")
 
                 when {
@@ -118,6 +130,7 @@ object SetupServer {
                         val apps = JSONArray()
                         for (a in Apps.list(app)) apps.put(JSONObject().put("pkg", a.pkg).put("label", a.label))
                         val res = JSONObject().put("config", cfg).put("apps", apps)
+                            .put("haUrls", JSONArray(Config.haUrls(app)))
                             .put("version", BuildConfig.VERSION_NAME)
                             .put("overlay", Overlay.canShow(app))
                         json(out, 200, res.toString())
@@ -164,6 +177,19 @@ object SetupServer {
                 try { json(sock.getOutputStream(), 500, JSONObject().put("error", e.message ?: "Fehler").toString()) } catch (_: Exception) {}
             }
         }
+    }
+
+    private fun resultPage(err: String?): String {
+        val ok = err == null
+        val title = if (ok) "TVHOME_OK" else "TVHOME_FAIL"
+        val head = if (ok) "Angemeldet" else "Anmeldung fehlgeschlagen"
+        val text = if (ok) "TV Home ist jetzt mit Home Assistant verbunden. Du kannst dieses Fenster schließen."
+        else (err ?: "") + " Bitte nochmal versuchen."
+        val esc = text.replace("&", "&amp;").replace("<", "&lt;")
+        return """<!doctype html><html lang="de"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+            <title>$title</title><style>body{font:18px/1.5 system-ui,Roboto,sans-serif;margin:0;min-height:100vh;display:flex;align-items:center;justify-content:center;background:#111;color:#f2f2f2;text-align:center;padding:24px}
+            h1{font-size:28px;font-weight:600;margin:0 0 8px;color:${if (ok) "#4fc483" else "#ff6b5e"}}</style></head>
+            <body><div><h1>$head</h1><p>$esc</p></div></body></html>"""
     }
 
     @Suppress("unused")

@@ -49,21 +49,22 @@
   <section>
     <h2><span class="n">1</span>Home Assistant verbinden</h2>
     <label for="haUrl">Adresse von Home Assistant</label>
-    <input id="haUrl" type="url" placeholder="http://192.168.1.10:8123" autocomplete="off">
-    <div class="hint">Am besten die IP-Adresse im Heimnetz verwenden (homeassistant.local funktioniert auf dem Shield oft nicht).</div>
-    <label for="haToken">Langlebiges Zugriffstoken</label>
-    <input id="haToken" type="password" placeholder="Token einfügen" autocomplete="off">
+    <input id="haUrl" type="url" list="haUrls" placeholder="http://192.168.0.5:8123" autocomplete="off">
+    <datalist id="haUrls"></datalist>
+    <div class="hint">Die IP-Adresse im Heimnetz ist am zuverlässigsten. Fällt sie aus, nutzt der Fernseher automatisch die anderen Adressen.</div>
     <div class="hint" id="tokenHint"></div>
+    <button id="login">Mit Home-Assistant-Konto anmelden</button>
+    <div class="hint">Du meldest dich mit deinem normalen Benutzernamen und Passwort an. TV Home erstellt danach selbst ein dauerhaftes Zugriffstoken.</div>
     <details>
-      <summary>So bekommst du ein Token</summary>
+      <summary>Alternativ: Token selbst einfügen</summary>
       <ol>
         <li>Home Assistant öffnen, unten links auf deinen Namen (Profil) tippen</li>
-        <li>Reiter „Sicherheit“ öffnen, ganz nach unten scrollen</li>
-        <li>„Langlebige Zugriffstoken“ → „Token erstellen“, Name z. B. „Shield TV“</li>
-        <li>Token kopieren und hier einfügen (es wird nur einmal angezeigt)</li>
+        <li>Reiter „Sicherheit“ → „Langlebige Zugriffstoken“ → „Token erstellen“</li>
+        <li>Token kopieren und hier einfügen</li>
       </ol>
+      <input id="haToken" type="password" placeholder="Token einfügen" autocomplete="off">
+      <button id="saveHa" class="sec">Token speichern</button>
     </details>
-    <button id="saveHa">Speichern und verbinden</button>
     <div class="msg" id="haMsg"></div>
   </section>
 
@@ -85,6 +86,7 @@
 
       <div class="sub">Küche</div>
       <label for="dishEntity">Spülmaschine – Restlaufzeit oder Endzeit</label><select id="dishEntity"></select>
+      <label for="dishStartEntity">Spülmaschine – Startzeitvorwahl „startet in“ (optional)</label><select id="dishStartEntity"></select>
       <label for="dishStatusEntity">Spülmaschine – Betriebszustand (optional)</label><select id="dishStatusEntity"></select>
       <label for="ovenEntity">Backofen – Restlaufzeit oder Endzeit</label><select id="ovenEntity"></select>
       <label for="ovenStatusEntity">Backofen – Betriebszustand (optional)</label><select id="ovenStatusEntity"></select>
@@ -124,12 +126,16 @@
   const msg = (id, text, ok) => { const m = $(id); m.textContent = text; m.className = 'msg ' + (ok ? 'ok' : 'err'); };
 
   let cfg = {}, apps = [], entities = [];
-  const SEL = ['cameraEntity', 'doorbellEntity', 'lightEntity', 'fanEntity', 'dishEntity', 'dishStatusEntity', 'ovenEntity', 'ovenStatusEntity'];
+  const SEL = ['cameraEntity', 'doorbellEntity', 'lightEntity', 'fanEntity', 'dishEntity', 'dishStartEntity', 'dishStatusEntity', 'ovenEntity', 'ovenStatusEntity'];
 
   function load() {
     api('/api/state').then((s) => {
       cfg = s.config; apps = s.apps;
       $('haUrl').value = cfg.haUrl || '';
+      $('haUrls').innerHTML = '';
+      (s.haUrls || []).concat(['http://192.168.0.5:8123', 'https://homeassistant.podolan.de', 'http://homeassistant.local:8123'])
+        .filter((u, i, a) => a.indexOf(u) === i).forEach((u) => $('haUrls').appendChild(new Option(u, u)));
+      const q = new URLSearchParams(location.search);
       $('tokenHint').textContent = cfg.hasToken ? 'Ein Token ist gespeichert. Leer lassen, um es zu behalten.' : '';
       ['cameraName', 'lightName', 'fanName'].forEach((k) => ($(k).value = cfg[k] || ''));
       $('ver').textContent = 'TV Home ' + s.version + (s.overlay ? '' : ' · Hinweis: Popup-Berechtigung fehlt noch');
@@ -140,6 +146,17 @@
   }
 
   // ---------- Home Assistant
+  $('login').onclick = () => {
+    const url = $('haUrl').value.trim().replace(/\/+$/, '');
+    if (!/^https?:\/\//.test(url)) { msg('haMsg', 'Die Adresse muss mit http:// oder https:// beginnen.', false); return; }
+    const origin = location.origin;
+    const auth = url + '/auth/authorize?response_type=code'
+      + '&client_id=' + encodeURIComponent(origin + '/')
+      + '&redirect_uri=' + encodeURIComponent(origin + '/auth-callback')
+      + '&state=' + encodeURIComponent(PIN + '|' + url);
+    msg('haMsg', 'Öffne die Anmeldeseite …', true);
+    post('/api/config', { haUrl: url }).finally(() => { location.href = auth; });
+  };
   $('saveHa').onclick = () => {
     const url = $('haUrl').value.trim();
     if (!/^https?:\/\//.test(url)) { msg('haMsg', 'Die Adresse muss mit http:// oder https:// beginnen.', false); return; }
@@ -164,6 +181,7 @@
     lightEntity: { domains: ['light', 'switch'] },
     fanEntity: { domains: ['fan', 'switch', 'light'] },
     dishEntity: { domains: ['sensor'], kind: 'remain', hint: ['spül', 'dish', 'geschirr'] },
+    dishStartEntity: { domains: ['sensor'], kind: 'remain', hint: ['spül', 'dish', 'geschirr'], optional: true },
     dishStatusEntity: { domains: ['sensor', 'binary_sensor', 'select'], kind: 'status', hint: ['spül', 'dish', 'geschirr'], optional: true },
     ovenEntity: { domains: ['sensor'], kind: 'remain', hint: ['ofen', 'oven', 'herd', 'back'] },
     ovenStatusEntity: { domains: ['sensor', 'binary_sensor', 'select'], kind: 'status', hint: ['ofen', 'oven', 'herd', 'back'], optional: true }

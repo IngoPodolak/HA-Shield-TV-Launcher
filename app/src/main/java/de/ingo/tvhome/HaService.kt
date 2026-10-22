@@ -64,7 +64,7 @@ class HaService : Service() {
 
     private fun currentKey(): String {
         val c = Config.get(this)
-        return listOf(c.optString("haUrl"), c.optString("haToken"), c.optString("doorbellEntity")).joinToString("|")
+        return listOf(Config.haUrls(this).joinToString(","), c.optString("haToken"), c.optString("doorbellEntity")).joinToString("|")
     }
 
     private fun reconnectIfChanged() {
@@ -79,10 +79,12 @@ class HaService : Service() {
         ws?.close(1000, null)
         ws = null
         connectedKey = currentKey()
-        val url = Config.haUrl(this)
+        val urls = Config.haUrls(this)
         val token = Config.haToken(this)
         val doorbell = Config.get(this).optString("doorbellEntity", "")
-        if (url.isEmpty() || token.isEmpty() || doorbell.isEmpty()) return
+        if (urls.isEmpty() || token.isEmpty() || doorbell.isEmpty()) return
+        val url = urls[urlIndex % urls.size]
+        var authed = false
 
         val wsUrl = url.replaceFirst("https://", "wss://").replaceFirst("http://", "ws://") + "/api/websocket"
         val req = try { Request.Builder().url(wsUrl).build() } catch (e: Exception) { return }
@@ -94,6 +96,9 @@ class HaService : Service() {
                     "auth_required" -> webSocket.send(JSONObject().put("type", "auth").put("access_token", token).toString())
                     "auth_ok" -> {
                         retryDelay = 5_000L
+                        authed = true
+                        failedInRow = 0
+                        Ha.activeUrl = url
                         val trigger = JSONObject().put("platform", "state").put("entity_id", JSONArray().put(doorbell))
                         webSocket.send(
                             JSONObject().put("id", 1).put("type", "subscribe_trigger").put("trigger", trigger).toString()
@@ -103,15 +108,21 @@ class HaService : Service() {
                 }
             }
 
-            override fun onFailure(webSocket: WebSocket, t: Throwable, response: Response?) = scheduleRetry(gen)
-            override fun onClosed(webSocket: WebSocket, code: Int, reason: String) = scheduleRetry(gen)
+            override fun onFailure(webSocket: WebSocket, t: Throwable, response: Response?) = scheduleRetry(gen, authed, urls.size)
+            override fun onClosed(webSocket: WebSocket, code: Int, reason: String) = scheduleRetry(gen, authed, urls.size)
         })
     }
 
-    private fun scheduleRetry(gen: Int) {
+    private var urlIndex = 0
+    private var failedInRow = 0
+
+    /** Erst die anderen Adressen durchprobieren, danach immer länger warten. */
+    private fun scheduleRetry(gen: Int, wasAuthed: Boolean, urlCount: Int) {
         if (gen != generation) return
-        main.postDelayed({ if (gen == generation) connect() }, retryDelay)
-        retryDelay = (retryDelay * 2).coerceAtMost(120_000L)
+        if (!wasAuthed) { urlIndex++; failedInRow++ }
+        val delay = if (!wasAuthed && failedInRow < urlCount) 1_000L else retryDelay
+        if (failedInRow >= urlCount) { failedInRow = 0; retryDelay = (retryDelay * 2).coerceAtMost(120_000L) }
+        main.postDelayed({ if (gen == generation) connect() }, delay)
     }
 
     private fun handleTrigger(event: JSONObject?) {

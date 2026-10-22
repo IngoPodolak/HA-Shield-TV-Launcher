@@ -11,10 +11,25 @@
     smart: 'on', camPreview: 'live', appliances: 'on',
     popupEnabled: true, popupPos: 'tr', popupSize: 'm', popupSeconds: 30, popupCam: 'live',
     favorites: [],
-    lightEntity: '', fanEntity: '', cameraEntity: '', doorbellEntity: '',
-    dishEntity: '', dishStatusEntity: '', ovenEntity: '', ovenStatusEntity: '',
-    lightName: 'Licht', fanName: 'Ventilator', cameraName: 'Haustür'
+    haUrl: 'http://192.168.0.5:8123', haUrlAlt: ['https://homeassistant.podolan.de', 'http://homeassistant.local:8123'],
+    lightEntity: 'light.wohnzimmer_licht', fanEntity: '',
+    cameraEntity: 'camera.reolink_doorbell_fliessend', doorbellEntity: 'binary_sensor.reolink_doorbell_besucher',
+    dishEntity: 'sensor.siemens_dishwasher_verbleibende_programmlaufzeit', dishStartEntity: 'sensor.siemens_dishwasher_start_in', dishStatusEntity: '',
+    ovenEntity: 'sensor.bosch_384050532704003972_001_bsh_common_option_remainingprogramtimeestimationstate', ovenStartEntity: '', ovenStatusEntity: '',
+    lightName: 'Wohnzimmer', fanName: 'Ventilator', cameraName: 'Haustür'
   };
+  const KNOWN_URLS = ['http://192.168.0.5:8123', 'https://homeassistant.podolan.de', 'http://homeassistant.local:8123'];
+  const ENTITY_ROWS = [
+    { key: 'lightEntity', label: 'Licht', domains: ['light', 'switch'], words: ['wohnzimmer'] },
+    { key: 'fanEntity', label: 'Deckenventilator', domains: ['fan', 'switch', 'light'], words: ['ventil', 'fan', 'decke'] },
+    { key: 'cameraEntity', label: 'Türkamera', domains: ['camera'], words: ['door', 'tür', 'klingel', 'reolink'] },
+    { key: 'doorbellEntity', label: 'Klingelknopf', domains: ['binary_sensor', 'event', 'sensor', 'input_boolean', 'button'], words: ['besucher', 'visitor', 'klingel', 'doorbell', 'ding', 'press'] },
+    { key: 'dishEntity', label: 'Spülmaschine Restlaufzeit', domains: ['sensor'], words: ['dishwasher', 'spül', 'geschirr'] },
+    { key: 'dishStartEntity', label: 'Spülmaschine Startzeitvorwahl', domains: ['sensor'], words: ['dishwasher', 'spül', 'start'] },
+    { key: 'dishStatusEntity', label: 'Spülmaschine Betriebszustand', domains: ['sensor', 'binary_sensor', 'select'], words: ['dishwasher', 'spül', 'operation', 'status', 'zustand'] },
+    { key: 'ovenEntity', label: 'Backofen Restlaufzeit', domains: ['sensor'], words: ['bosch', 'oven', 'ofen', 'remaining', 'rest', 'finish'] },
+    { key: 'ovenStatusEntity', label: 'Backofen Betriebszustand', domains: ['sensor', 'binary_sensor', 'select'], words: ['bosch', 'oven', 'ofen', 'operation', 'status', 'zustand'] }
+  ];
   let cfg = {};
   function loadCfg() {
     let raw = {};
@@ -27,6 +42,12 @@
   }
 
   const SETTINGS = [
+    { section: 'Home Assistant' },
+    { act: 'login', label: 'Am Fernseher anmelden', icon: 'power', value: () => HA.status },
+    { act: 'setup', label: 'Mit dem Handy anmelden (QR-Code)', icon: 'phone', value: () => '' },
+    { key: 'haUrl', label: 'Adresse', opts: KNOWN_URLS.map((u) => [u, u.replace(/^https?:\/\//, '')]) },
+    { section: 'Geräte' }
+  ].concat(ENTITY_ROWS.map((e) => ({ act: 'entity', entity: e, label: e.label, value: () => entityLabel(cfg[e.key]) }))).concat([
     { section: 'Darstellung' },
     { key: 'layout', label: 'Layout', opts: [['dock', 'Dock'], ['list', 'Liste']] },
     { key: 'material', label: 'Material', opts: [['clear', 'Klar getönt'], ['frost', 'Milchglas'], ['dark', 'Dunkel getönt'], ['none', 'Ohne']] },
@@ -56,11 +77,17 @@
     { key: 'popupSeconds', label: 'Anzeigedauer', opts: [[15, '15 Sek.'], [30, '30 Sek.'], [60, '1 Min.'], [120, '2 Min.']] },
     { key: 'popupCam', label: 'Kamerabild im Popup', opts: [['live', 'Live'], ['still', 'Standbild']] },
     { act: 'testpopup', label: 'Popup testen', icon: 'bell', value: () => (Android.canOverlay() ? '' : 'Berechtigung fehlt') },
-    { section: 'Einrichtung' },
-    { act: 'setup', label: 'Am Handy einrichten', icon: 'phone', value: () => 'HA: ' + HA.status },
+    { section: 'System' },
+    { act: 'setup', label: 'Am Handy verwalten (Apps, Fotos)', icon: 'phone', value: () => '' },
     { act: 'update', label: 'Nach Update suchen', icon: 'update', value: () => 'Version ' + Android.version() },
     { act: 'android', label: 'Android-Einstellungen', icon: 'android', value: () => '' }
-  ];
+  ]);
+  function entityLabel(id) {
+    if (!id) return '–';
+    const s = HA.get(id);
+    const n = s && s.attributes && s.attributes.friendly_name;
+    return n || id;
+  }
 
   // ------------------------------------------------------------------ Hilfen
   const $ = (s, r) => (r || document).querySelector(s);
@@ -356,7 +383,7 @@
         row._lr = step;
         row._act = () => step(1);
       } else {
-        row._act = () => settingsAction(s.act);
+        row._act = () => settingsAction(s.act, s);
       }
       row._upd = upd; upd(); rows.push(row);
       track.appendChild(row);
@@ -365,20 +392,65 @@
     openModal(sheet, { side: true, refresh: () => rows.forEach((r) => r._upd()) });
   }
   function onCfgChanged(key) {
+    if (key === 'haUrl') {
+      const alt = KNOWN_URLS.filter((u) => u !== cfg.haUrl);
+      saveCfg({ haUrlAlt: alt });
+      connectHa();
+    }
     applyCfg();
     if (key === 'layout') { dockOffset = 0; listOffset = 0; renderApps(); }
     if (key === 'iconStyle' || key === 'labels' || key === 'textSize') renderApps();
     if (key && key.startsWith('bg')) { bgIndex = 0; loadBackgroundLists(); startBg(true); }
     if (key === 'camPreview' || key === 'smart' || key === 'appliances') { renderSmart(true); renderStatus(); }
   }
-  function settingsAction(a) {
-    if (a === 'bgpicker') openBgPicker();
+  function settingsAction(a, s) {
+    if (a === 'login') { toast('Anmeldeseite von Home Assistant wird geöffnet …'); Android.login(HA.url || cfg.haUrl); }
+    else if (a === 'entity') openEntityPicker(s.entity);
+    else if (a === 'bgpicker') openBgPicker();
     else if (a === 'testpopup') {
       if (!Android.canOverlay()) toast('Popup-Berechtigung fehlt – wird bei der Installation per Befehl gesetzt');
       else { Android.testPopup(); toast('Test-Popup ausgelöst'); }
     } else if (a === 'setup') openSetup();
     else if (a === 'update') checkUpdate();
     else if (a === 'android') Android.openAndroidSettings();
+  }
+
+  function openEntityPicker(def) {
+    const track = h('div', { class: 'scrolltrack' });
+    const sub = h('div', { class: 'sub', text: 'Lade Geräte aus Home Assistant …' });
+    openModal(h('div', { class: 'sheet', style: 'width:56vw;height:86vh' }, [
+      h('h2', {}, [icon('gear'), def.label]), sub, h('div', { class: 'scroll' }, [track])
+    ]));
+    const pick = (id) => {
+      const p = {}; p[def.key] = id; saveCfg(p);
+      connectHa(); renderSmart(true); renderStatus();
+      closeModal(); refreshModals();
+      toast(def.label + ': ' + (id || 'keins'));
+    };
+    HA.listStates().then((list) => {
+      const rel = (e) => {
+        const t = (e.entity_id + ' ' + (e.attributes.friendly_name || '')).toLowerCase();
+        return def.words.some((w) => t.includes(w)) ? 0 : 1;
+      };
+      list = list.filter((e) => def.domains.includes(e.entity_id.split('.')[0]))
+        .sort((a, b) => rel(a) - rel(b) || (a.attributes.friendly_name || a.entity_id).localeCompare(b.attributes.friendly_name || b.entity_id));
+      sub.textContent = list.length + ' passende Einträge · aktuell: ' + (cfg[def.key] || 'keiner');
+      const mk = (id, name, extra) => {
+        const row = h('div', { class: 'row' + (id === (cfg[def.key] || '') ? ' current' : ''), 'data-f': true, _act: () => pick(id) }, [
+          h('div', {}, [h('div', { text: name }), id ? h('div', { class: 'hint', text: id }) : null]),
+          h('div', { class: 'val' }, [h('span', { class: 'txt', text: extra || '' }), id === (cfg[def.key] || '') ? icon('check', 'arr') : null])
+        ]);
+        track.appendChild(row);
+      };
+      mk('', '– keins –');
+      list.forEach((e) => {
+        const unit = e.attributes.unit_of_measurement ? ' ' + e.attributes.unit_of_measurement : '';
+        const st = String(e.state).length > 28 ? String(e.state).slice(0, 26) + '…' : e.state + unit;
+        mk(e.entity_id, e.attributes.friendly_name || e.entity_id, st);
+      });
+      const cur = track.querySelector('.current');
+      setFocus(cur || track.querySelector('[data-f]'));
+    }).catch((err) => { sub.textContent = err.message + ' – bitte zuerst anmelden.'; });
   }
 
   function openSetup() {
@@ -392,7 +464,7 @@
         h('div', { class: 'txt' }, [
           h('div', { html: '1. Handy ins <b>gleiche WLAN</b> wie den Shield' }),
           h('div', { html: '2. QR-Code mit der Kamera scannen' }),
-          h('div', { html: '3. Home Assistant verbinden, Geräte auswählen, Apps und Fotos verwalten' }),
+          h('div', { html: '3. Mit deinem Home-Assistant-Konto anmelden, Apps sortieren, eigene Fotos hochladen' }),
           h('div', { class: 'url', text: url.replace(/\?pin=.*/, '') }),
           h('div', { html: 'PIN: <b>' + pin + '</b> · Home Assistant: <b>' + HA.status + '</b>', style: 'margin-top:.6vw;opacity:.8' })
         ])
@@ -563,7 +635,14 @@
   function renderStatus() {
     const box = $('#status'); box.innerHTML = '';
     if (cfg.appliances === 'off') return;
-    [['dishEntity', 'dishStatusEntity', 'dishwasher', 'Spülmaschine'], ['ovenEntity', 'ovenStatusEntity', 'oven', 'Backofen']].forEach(([k, sk, ic, name]) => {
+    [['dishEntity', 'dishStatusEntity', 'dishStartEntity', 'dishwasher', 'Spülmaschine'], ['ovenEntity', 'ovenStatusEntity', 'ovenStartEntity', 'oven', 'Backofen']].forEach(([k, sk, stk, ic, name]) => {
+      const startIn = cfg[stk] ? remaining(cfg[stk]) : null;
+      if (startIn !== null && startIn > 0.5 && startIn < 24 * 60) {
+        const at = new Date(Date.now() + startIn * 60000);
+        box.appendChild(h('div', { class: 'chip glass' }, [icon(ic), h('span', { text: name + ' startet in' }), h('b', { text: fmtDur(startIn) }),
+          h('span', { class: 'sub', text: '· um ' + fmtTime(at) })]));
+        return;
+      }
       if (!cfg[k]) return;
       const mins = remaining(cfg[k]);
       if (!running(cfg[k], cfg[sk], mins)) return;
@@ -762,7 +841,8 @@
 
   // ------------------------------------------------------------------ Home Assistant verbinden
   function connectHa() {
-    HA.configure(cfg.haUrl, cfg.haToken, [cfg.cameraEntity, cfg.lightEntity, cfg.fanEntity, cfg.dishEntity, cfg.dishStatusEntity, cfg.ovenEntity, cfg.ovenStatusEntity]);
+    HA.configure([cfg.haUrl].concat(cfg.haUrlAlt || []), cfg.haToken,
+      [cfg.cameraEntity, cfg.lightEntity, cfg.fanEntity, cfg.dishEntity, cfg.dishStartEntity, cfg.dishStatusEntity, cfg.ovenEntity, cfg.ovenStartEntity, cfg.ovenStatusEntity]);
   }
   HA.onChange(() => { renderSmart(); renderStatus(); refreshModals(); });
 

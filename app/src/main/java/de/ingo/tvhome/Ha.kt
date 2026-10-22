@@ -7,14 +7,23 @@ import org.json.JSONObject
 
 /** Einfache REST-Aufrufe an Home Assistant. */
 object Ha {
+    /** Die zuletzt funktionierende Adresse (lokal oder über die Domain). */
+    @Volatile var activeUrl: String? = null
+
     fun get(ctx: Context, path: String): String? {
-        val url = Config.haUrl(ctx)
         val token = Config.haToken(ctx)
-        if (url.isEmpty() || token.isEmpty()) return null
-        return try {
-            val req = Request.Builder().url(url + path).header("Authorization", "Bearer $token").build()
-            TvHomeApp.http.newCall(req).execute().use { r -> if (r.isSuccessful) r.body?.string() else null }
-        } catch (e: Exception) { null }
+        val urls = Config.haUrls(ctx)
+        if (urls.isEmpty() || token.isEmpty()) return null
+        val ordered = (listOfNotNull(activeUrl?.takeIf { it in urls }) + urls).distinct()
+        for (url in ordered) {
+            try {
+                val req = Request.Builder().url(url + path).header("Authorization", "Bearer $token").build()
+                val body = TvHomeApp.http.newCall(req).execute().use { r -> if (r.isSuccessful) r.body?.string() else null }
+                if (body != null) { activeUrl = url; return body }
+            } catch (_: Exception) {
+            }
+        }
+        return null
     }
 
     fun state(ctx: Context, entityId: String): JSONObject? =
@@ -49,6 +58,6 @@ object Ha {
         val token = s.optJSONObject("attributes")?.optString("access_token") ?: return null
         if (token.isEmpty()) return null
         val path = if (live) "camera_proxy_stream" else "camera_proxy"
-        return Config.haUrl(ctx) + "/api/$path/$entityId?token=$token"
+        return (activeUrl ?: Config.haUrl(ctx)) + "/api/$path/$entityId?token=$token"
     }
 }

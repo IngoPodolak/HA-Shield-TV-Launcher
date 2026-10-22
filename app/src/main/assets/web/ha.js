@@ -18,10 +18,13 @@
   HA.onChange = (fn) => HA.listeners.push(fn);
   const emit = () => HA.listeners.forEach((f) => { try { f(); } catch (e) { console.error(e); } });
 
-  HA.configure = function (url, token, ids) {
-    url = (url || '').trim().replace(/\/+$/, '');
-    const same = url === HA.url && token === HA.token && JSON.stringify(ids) === JSON.stringify(HA.ids);
-    HA.url = url; HA.token = token; HA.ids = ids.filter(Boolean);
+  /** urls: Hauptadresse zuerst, dann Ausweichadressen. Klappt eine nicht, wird die nächste probiert. */
+  HA.configure = function (urls, token, ids) {
+    urls = (urls || []).map((u) => String(u || '').trim().replace(/\/+$/, '')).filter(Boolean);
+    const key = JSON.stringify([urls, token, ids]);
+    const same = key === HA.key;
+    HA.key = key; HA.urls = urls; HA.urlIdx = 0; HA.fails = 0; HA.token = token; HA.ids = ids.filter(Boolean);
+    HA.url = urls[0] || '';
     if (window.MOCK_HA) { HA.connected = true; HA.status = 'Demo'; window.MOCK_HA.attach(HA); emit(); return; }
     if (same && HA.ws) return;
     HA.connect();
@@ -31,18 +34,20 @@
     const gen = ++HA.gen;
     if (HA.ws) { try { HA.ws.close(); } catch (e) {} HA.ws = null; }
     HA.connected = false;
-    if (!HA.url || !HA.token) { HA.status = 'nicht eingerichtet'; emit(); return; }
+    HA.url = HA.urls.length ? HA.urls[HA.urlIdx % HA.urls.length] : '';
+    if (!HA.url || !HA.token) { HA.status = HA.token ? 'keine Adresse' : 'nicht angemeldet'; emit(); return; }
     HA.status = 'verbinde…'; emit();
-    let ws;
+    let ws, authed = false;
     try { ws = new WebSocket(HA.url.replace(/^http/, 'ws') + '/api/websocket'); } catch (e) { HA.status = 'Adresse ungültig'; emit(); return; }
     HA.ws = ws;
     ws.onmessage = (ev) => {
       if (gen !== HA.gen) return;
       let m; try { m = JSON.parse(ev.data); } catch (e) { return; }
       if (m.type === 'auth_required') ws.send(JSON.stringify({ type: 'auth', access_token: HA.token }));
-      else if (m.type === 'auth_invalid') { HA.status = 'Token ungültig'; emit(); }
+      else if (m.type === 'auth_invalid') { HA.status = 'Anmeldung ungültig – bitte neu anmelden'; HA.invalid = true; emit(); }
       else if (m.type === 'auth_ok') {
-        HA.connected = true; HA.status = 'verbunden'; HA.retry = 3000;
+        authed = true; HA.fails = 0; HA.invalid = false;
+        HA.connected = true; HA.status = 'verbunden (' + HA.url.replace(/^https?:\/\//, '') + ')'; HA.retry = 3000;
         if (HA.ids.length) ws.send(JSON.stringify({ id: 1, type: 'subscribe_entities', entity_ids: HA.ids }));
         emit();
       } else if (m.type === 'event' && m.id === 1) applyCompressed(m.event);
@@ -51,11 +56,29 @@
     ws.onclose = () => {
       if (gen !== HA.gen) return;
       HA.connected = false;
-      if (HA.status === 'verbunden' || HA.status === 'verbinde…') HA.status = 'getrennt – verbinde neu…';
+      if (HA.invalid) { emit(); return; }
+      let delay = HA.retry;
+      if (!authed) {
+        HA.urlIdx++; HA.fails++;
+        if (HA.fails < HA.urls.length) delay = 500;
+        else { HA.fails = 0; HA.retry = Math.min(HA.retry * 2, 60000); }
+        HA.status = 'nicht erreichbar – versuche ' + HA.urls[HA.urlIdx % HA.urls.length].replace(/^https?:\/\//, '') + ' …';
+      } else HA.status = 'getrennt – verbinde neu …';
       emit();
-      setTimeout(() => { if (gen === HA.gen) HA.connect(); }, HA.retry);
-      HA.retry = Math.min(HA.retry * 2, 60000);
+      setTimeout(() => { if (gen === HA.gen) HA.connect(); }, delay);
     };
+  };
+
+  /** Alle Entitäten (für die Geräteauswahl im Menü). */
+  HA.listStates = function () {
+    if (window.MOCK_HA) return Promise.resolve(window.MOCK_HA.list());
+    return new Promise((resolve, reject) => {
+      if (!HA.ws || !HA.connected) { reject(new Error('Home Assistant ist nicht verbunden')); return; }
+      const id = ++HA.msgId;
+      HA.pending[id] = (m) => (m.success ? resolve(m.result) : reject(new Error('Fehler beim Laden')));
+      HA.ws.send(JSON.stringify({ id, type: 'get_states' }));
+      setTimeout(() => { if (HA.pending[id]) { delete HA.pending[id]; reject(new Error('Keine Antwort')); } }, 15000);
+    });
   };
 
   function applyCompressed(ev) {

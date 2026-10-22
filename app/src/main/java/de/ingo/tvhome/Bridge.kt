@@ -36,6 +36,9 @@ class Bridge(private val activity: MainActivity) {
     @JavascriptInterface fun openOverlaySettings() =
         start(Intent(Settings.ACTION_MANAGE_OVERLAY_PERMISSION, Uri.parse("package:" + ctx.packageName)))
 
+    @JavascriptInterface fun login(haUrl: String) =
+        start(Intent(ctx, LoginActivity::class.java).putExtra("haUrl", haUrl))
+
     @JavascriptInterface fun httpGet(url: String): String = try {
         TvHomeApp.http.newCall(Request.Builder().url(url).build()).execute().use { it.body?.string() ?: "" }
     } catch (e: Exception) { "" }

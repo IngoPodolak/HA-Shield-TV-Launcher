@@ -55,6 +55,8 @@
       this.HA.listeners.forEach((f) => f());
       return true;
     },
-    cameraUrl: () => window.MOCK_CAM || ''
+    cameraUrl: () => window.MOCK_CAM || '',
+    list: () => Object.keys(states).map((id) => ({ entity_id: id, state: states[id].state, attributes: states[id].attributes }))
+      .concat([{ entity_id: 'light.kueche', state: 'off', attributes: { friendly_name: 'Küche' } }, { entity_id: 'light.esstisch', state: 'on', attributes: { friendly_name: 'Esstisch' } }])
   };
 })();
