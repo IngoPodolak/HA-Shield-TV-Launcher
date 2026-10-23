@@ -9,6 +9,7 @@ import android.graphics.drawable.AdaptiveIconDrawable
 import android.graphics.drawable.Drawable
 import android.os.Build
 import android.util.Base64
+import android.util.DisplayMetrics
 import org.json.JSONArray
 import org.json.JSONObject
 import java.io.ByteArrayOutputStream
@@ -47,7 +48,22 @@ object Apps {
         return arr.toString()
     }
 
+    /** Grafik in der höchsten Auflösung laden, die die App mitbringt (statt der kleinen TV-Variante). */
+    private fun hiRes(ctx: Context, pkg: String, wantBanner: Boolean): Drawable? {
+        return try {
+            val pm = ctx.packageManager
+            val ai = pm.getApplicationInfo(pkg, 0)
+            val i = pm.getLeanbackLaunchIntentForPackage(pkg) ?: pm.getLaunchIntentForPackage(pkg)
+            val act = if (i != null) pm.resolveActivity(i, 0)?.activityInfo else null
+            val id = if (wantBanner) (act?.banner?.takeIf { it != 0 } ?: ai.banner)
+            else (act?.iconResource?.takeIf { it != 0 } ?: ai.icon)
+            if (id == 0) null
+            else pm.getResourcesForApplication(ai).getDrawableForDensity(id, DisplayMetrics.DENSITY_XXXHIGH, null)
+        } catch (e: Exception) { null }
+    }
+
     private fun banner(ctx: Context, pkg: String): Drawable? {
+        hiRes(ctx, pkg, true)?.let { return it }
         val pm = ctx.packageManager
         return try {
             val i = pm.getLeanbackLaunchIntentForPackage(pkg)
@@ -57,7 +73,13 @@ object Apps {
     }
 
     private fun icon(ctx: Context, pkg: String): Drawable? =
-        try { ctx.packageManager.getApplicationIcon(pkg) } catch (e: Exception) { null }
+        hiRes(ctx, pkg, false) ?: try { ctx.packageManager.getApplicationIcon(pkg) } catch (e: Exception) { null }
+
+    /** Banner groß genug rendern: mindestens 640×360, mehr wenn die Grafik selbst größer ist. */
+    private fun renderBanner(d: Drawable): Bitmap {
+        val w = maxOf(640, d.intrinsicWidth)
+        return render(d, w, w * 9 / 16)
+    }
 
     private fun render(d: Drawable, w: Int, h: Int): Bitmap {
         val bmp = Bitmap.createBitmap(w, h, Bitmap.Config.ARGB_8888)
@@ -83,13 +105,13 @@ object Apps {
             when (style) {
                 "banner" -> {
                     val b = banner(ctx, pkg)
-                    if (b != null) png(render(b, 320, 180)) else icon(ctx, pkg)?.let { png(render(it, 192, 192)) }
+                    if (b != null) png(renderBanner(b)) else icon(ctx, pkg)?.let { png(render(it, 384, 384)) }
                 }
-                "mono" -> mono(ctx, pkg)?.let { png(it) } ?: icon(ctx, pkg)?.let { png(render(it, 192, 192)) }
+                "mono" -> mono(ctx, pkg)?.let { png(it) } ?: icon(ctx, pkg)?.let { png(render(it, 384, 384)) }
                 // Weißer Schriftzug aus dem TV-Banner; ohne Banner das weiße Symbol.
-                "bannermono" -> banner(ctx, pkg)?.let { toWhite(render(it, 320, 180), 360, 120) }?.let { png(it) }
-                    ?: mono(ctx, pkg)?.let { png(it) } ?: icon(ctx, pkg)?.let { png(render(it, 192, 192)) }
-                else -> icon(ctx, pkg)?.let { png(render(it, 192, 192)) }
+                "bannermono" -> banner(ctx, pkg)?.let { toWhite(renderBanner(it), 720, 240) }?.let { png(it) }
+                    ?: mono(ctx, pkg)?.let { png(it) } ?: icon(ctx, pkg)?.let { png(render(it, 384, 384)) }
+                else -> icon(ctx, pkg)?.let { png(render(it, 384, 384)) }
             }
         } catch (e: Exception) { null }
         if (bytes != null) iconCache[key] = bytes
@@ -107,7 +129,7 @@ object Apps {
      */
     private fun mono(ctx: Context, pkg: String): Bitmap? {
         val d = icon(ctx, pkg) ?: return null
-        val size = 192
+        val size = 384
         var src: Bitmap? = null
         if (Build.VERSION.SDK_INT >= 26 && d is AdaptiveIconDrawable && d.foreground != null) {
             val fg = d.foreground!!
@@ -117,12 +139,12 @@ object Apps {
             fg.draw(Canvas(bmp))
             src = bmp
         }
-        val first = src?.let { toWhite(it) }
+        val first = src?.let { toWhite(it, size, size) }
         if (first != null) return first
-        return toWhite(render(d, size, size))
+        return toWhite(render(d, size, size), size, size)
     }
 
-    private fun toWhite(bmp: Bitmap, outW: Int = 192, outH: Int = 192): Bitmap? {
+    private fun toWhite(bmp: Bitmap, outW: Int, outH: Int): Bitmap? {
         val w = bmp.width; val h = bmp.height
         val px = IntArray(w * h)
         bmp.getPixels(px, 0, w, 0, 0, w, h)
@@ -148,7 +170,7 @@ object Apps {
             var a = Color.alpha(p)
             if (useBg && a > 0) {
                 val dist = Math.abs(Color.red(p) - br) + Math.abs(Color.green(p) - bgc) + Math.abs(Color.blue(p) - bb)
-                a = (a * ((dist - 45) * 3).coerceIn(0.0, 255.0) / 255.0).toInt()
+                a = (a * ((dist - 25) / 110.0).coerceIn(0.0, 1.0)).toInt()
             }
             alpha[i] = a
             val l = (0.299 * Color.red(p) + 0.587 * Color.green(p) + 0.114 * Color.blue(p)).toInt().coerceIn(0, 255)
@@ -200,7 +222,7 @@ object Apps {
         // Logo zuschneiden und mittig in ein Quadrat setzen, damit alle Logos gleich groß wirken.
         val cw = maxX - minX + 1; val ch = maxY - minY + 1
         val crop = Bitmap.createBitmap(res, minX, minY, cw, ch)
-        val pad = 4
+        val pad = outH / 40
         val scale = minOf((outW - 2 * pad).toFloat() / cw, (outH - 2 * pad).toFloat() / ch)
         val sw = (cw * scale).toInt().coerceAtLeast(1); val sh = (ch * scale).toInt().coerceAtLeast(1)
         val outBmp = Bitmap.createBitmap(outW, outH, Bitmap.Config.ARGB_8888)

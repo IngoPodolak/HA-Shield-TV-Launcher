@@ -81,11 +81,41 @@ class MainActivity : Activity() {
         js("window.tvHome && tvHome()")
     }
 
-    /** Zurück-Taste: Die Oberfläche entscheidet (Menü schließen usw.). Ein Launcher wird nie beendet. */
+    private val okHandler = android.os.Handler(android.os.Looper.getMainLooper())
+    private var okDown = false
+    private var okLongFired = false
+    private val okLong = Runnable {
+        if (okDown && !okLongFired) { okLongFired = true; js("window.tvOk && tvOk(true)") }
+    }
+
+    /**
+     * Zurück-Taste: Die Oberfläche entscheidet (Menü schließen usw.). Ein Launcher wird nie beendet.
+     * OK-Taste: kurz und lang drücken wird hier erkannt, weil die Fernbedienung das lange Drücken
+     * nicht zuverlässig an die Webansicht weitergibt.
+     */
     override fun dispatchKeyEvent(event: KeyEvent): Boolean {
-        if (event.keyCode == KeyEvent.KEYCODE_BACK) {
-            if (event.action == KeyEvent.ACTION_UP) js("window.tvBack && tvBack()")
-            return true
+        when (event.keyCode) {
+            KeyEvent.KEYCODE_BACK -> {
+                if (event.action == KeyEvent.ACTION_UP) js("window.tvBack && tvBack()")
+                return true
+            }
+            KeyEvent.KEYCODE_DPAD_CENTER, KeyEvent.KEYCODE_ENTER, KeyEvent.KEYCODE_NUMPAD_ENTER, KeyEvent.KEYCODE_BUTTON_A -> {
+                if (event.action == KeyEvent.ACTION_DOWN) {
+                    if (event.repeatCount == 0) {
+                        okDown = true; okLongFired = false
+                        okHandler.removeCallbacks(okLong)
+                        okHandler.postDelayed(okLong, 600)
+                    } else if (!okLongFired && event.eventTime - event.downTime >= 600) {
+                        okHandler.removeCallbacks(okLong)
+                        okLong.run()
+                    }
+                } else if (event.action == KeyEvent.ACTION_UP) {
+                    okHandler.removeCallbacks(okLong)
+                    if (okDown && !okLongFired) js("window.tvOk && tvOk(false)")
+                    okDown = false
+                }
+                return true
+            }
         }
         return super.dispatchKeyEvent(event)
     }

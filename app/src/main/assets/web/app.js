@@ -433,6 +433,13 @@
     setFocus(defaultFocus());
   }
   window.tvBack = back;
+  /** OK-Taste von Android: long = gedrückt gehalten. */
+  window.tvOk = (long) => {
+    lastKey = Date.now();
+    if (document.body.classList.contains('art')) { exitArt(); return; }
+    if (moving) { if (!long) endMove(true); return; }
+    activate(!!long);
+  };
   window.tvHome = () => {
     while (modals.length) closeModal();
     exitArt();
