@@ -266,42 +266,7 @@ object Apps {
             acc = 0
             for (v in 255 downTo 0) { acc += hist[v]; if (acc >= strong * 0.05) { hi = v; break } }
         }
-        // 3. Ausstanzen statt Graustufen: Liegt eine Fläche fast vollständig INNERHALB einer anders hellen Fläche
-        //    (Buchstaben in den RTL-Kästen, das Z im ZDF-Kreis, das Play-Dreieck), wird sie ausgeschnitten.
-        //    So entsteht ein einfarbiges Logo wie bei echten Monochrom-Logos – alles Übrige wird reinweiß.
-        if (hi - lo > 80) {
-            val mid = (lo + hi) / 2
-            val tone = ByteArray(w * h)
-            for (i in 0 until w * h) if (alpha[i] >= 120) tone[i] = if (lum[i] < mid) 1 else 2
-            val seen = BooleanArray(w * h)
-            val stack = IntArray(w * h)
-            val members = IntArray(w * h)
-            for (start in 0 until w * h) {
-                if (tone[start].toInt() == 0 || seen[start]) continue
-                val t = tone[start]
-                var sp = 0; var count = 0; var other = 0; var bgN = 0
-                stack[sp++] = start; seen[start] = true
-                while (sp > 0) {
-                    val i = stack[--sp]
-                    members[count++] = i
-                    val x = i % w; val y = i / w
-                    for (d in 0..3) {
-                        val nx = x + (if (d == 0) 1 else if (d == 1) -1 else 0)
-                        val ny = y + (if (d == 2) 1 else if (d == 3) -1 else 0)
-                        if (nx < 0 || ny < 0 || nx >= w || ny >= h) { bgN++; continue }
-                        val j = ny * w + nx
-                        when {
-                            tone[j] == t -> if (!seen[j]) { seen[j] = true; stack[sp++] = j }
-                            tone[j].toInt() != 0 -> other++
-                            alpha[j] < 60 -> bgN++
-                        }
-                    }
-                }
-                if (count >= 12 && other > 0 && other >= (other + bgN) * 0.75) {
-                    for (m in 0 until count) alpha[members[m]] = 0
-                }
-            }
-        }
+        // 3. Logo einheitlich reinweiß (Ausstanzen innerer Flächen hat echte Logos mit Schattierungen zerstört).
         val out = IntArray(w * h)
         for (i in 0 until w * h) out[i] = Color.argb(alpha[i], 255, 255, 255)
         val ratio = covered.toDouble() / (w * h)
