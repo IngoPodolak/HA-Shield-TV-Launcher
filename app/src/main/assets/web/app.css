@@ -120,6 +120,10 @@ body.layout-list #topicons { display: none; }
 body.labels-off .app .lbl { display: none; }
 body.labels-off .app .ico { width: 3.6vw; height: 3.6vw; }
 body.icons-white .app .ico img { filter: drop-shadow(0 1px 6px rgba(0,0,0,.25)); }
+body.icons-white .app .ico { width: 4.4vw; height: 4.4vw; }
+body.icons-white.labels-off .app .ico { width: 5.2vw; height: 5.2vw; }
+body.icons-white .app { gap: .5vw; }
+body.icons-white .litem .ico { width: 2.9vw; height: 2.9vw; }
 /* TV-Banner: breite Bilder statt Symbol, Name steht schon im Banner */
 body.icons-banner .app { gap: .4vw; }
 body.icons-banner .app .ico { width: 11.6vw; height: 6.5vw; }
@@ -266,7 +270,7 @@ body.artclock-small #artclock-date { font-size: 1vw; }
 .sheet .sw.focused { background: transparent; box-shadow: 0 0 0 .18vw #fff; }
 
 .camfull { width: 82vw; }
-.camfull img { width: 100%; aspect-ratio: 16/9; object-fit: contain; background: #000; border-radius: 1vw; }
+.camfull img { width: 100%; height: 72vh; object-fit: contain; background: #000; border-radius: 1vw; }
 
 .qr { display: flex; gap: 2vw; align-items: center; }
 .qr img { width: 15vw; height: 15vw; border-radius: 1vw; background: #fff; padding: .6vw; }

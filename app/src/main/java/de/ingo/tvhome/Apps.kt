@@ -158,7 +158,7 @@ object Apps {
         val cw = maxX - minX + 1; val ch = maxY - minY + 1
         val crop = Bitmap.createBitmap(res, minX, minY, cw, ch)
         val side = 192
-        val pad = 12
+        val pad = 4
         val scale = minOf((side - 2 * pad).toFloat() / cw, (side - 2 * pad).toFloat() / ch)
         val sw = (cw * scale).toInt().coerceAtLeast(1); val sh = (ch * scale).toInt().coerceAtLeast(1)
         val outBmp = Bitmap.createBitmap(side, side, Bitmap.Config.ARGB_8888)

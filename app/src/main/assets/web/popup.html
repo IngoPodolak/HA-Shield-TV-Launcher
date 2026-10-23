@@ -7,29 +7,33 @@
   html, body { margin: 0; height: 100%; background: transparent; overflow: hidden; }
   body { font-family: "Google Sans", Roboto, system-ui, sans-serif; color: #fff; }
   .box {
-    position: absolute; inset: 0; border-radius: 18px; overflow: hidden;
-    background: rgba(18, 18, 22, .92); border: 2px solid #f3c76b;
+    position: absolute; inset: 0; border-radius: 20px; overflow: hidden;
+    background: rgba(18, 18, 22, .9);
+    border: 1px solid rgba(255, 255, 255, .14);
     display: flex; flex-direction: column;
     animation: in .35s cubic-bezier(.2,.8,.2,1);
   }
-  @keyframes in { from { transform: translateY(-12px) scale(.97); opacity: 0; } to { transform: none; opacity: 1; } }
-  .head { display: flex; align-items: center; gap: 10px; padding: 0 14px; height: 48px; font-size: 18px; font-weight: 500; flex: none; }
-  .head svg { width: 24px; height: 24px; color: #f3c76b; animation: ring 1s ease-in-out 3; }
+  @keyframes in { from { transform: translateY(-10px); opacity: 0; } to { transform: none; opacity: 1; } }
+  .head { display: flex; align-items: center; gap: 10px; padding: 0 16px; height: 52px; flex: none; }
+  .head svg { width: 22px; height: 22px; flex: none; animation: ring 1s ease-in-out 3; transform-origin: 50% 10%; }
   @keyframes ring { 0%,100% { transform: rotate(0); } 20% { transform: rotate(14deg); } 40% { transform: rotate(-12deg); } 60% { transform: rotate(8deg); } 80% { transform: rotate(-4deg); } }
-  .cam { flex: 1; background: #000; position: relative; }
-  .cam img { width: 100%; height: 100%; object-fit: cover; display: block; }
+  .title { font-size: 17px; font-weight: 500; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .hint { position: absolute; right: 10px; bottom: 12px; z-index: 1; font-size: 12px; padding: 3px 9px; border-radius: 99px; background: rgba(0,0,0,.5); color: rgba(255,255,255,.8); }
+  .cam { flex: 1; min-height: 0; background: #000; position: relative; }
+  .cam img { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: contain; display: block; }
   .cam .none { position: absolute; inset: 0; display: flex; align-items: center; justify-content: center; opacity: .6; font-size: 15px; }
-  .live { position: absolute; left: 10px; top: 10px; background: #e5483d; font-size: 12px; padding: 2px 7px; border-radius: 4px; font-weight: 500; }
-  .bar { position: absolute; left: 0; bottom: 0; height: 4px; background: #f3c76b; width: 100%; transform-origin: left; }
+  .live { position: absolute; left: 10px; top: 10px; display: flex; align-items: center; gap: 6px; background: rgba(0,0,0,.5); font-size: 12px; padding: 3px 9px; border-radius: 99px; }
+  .live i { width: 7px; height: 7px; border-radius: 50%; background: #ff5a4f; }
+  .bar { position: absolute; left: 0; bottom: 0; height: 3px; background: rgba(255,255,255,.55); width: 100%; transform-origin: left; }
 </style>
 </head>
 <body>
 <div class="box">
   <div class="head">
     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M10 5a2 2 0 1 1 4 0 7 7 0 0 1 4 6v3l2 3H4l2-3v-3a7 7 0 0 1 4-6"/><path d="M9 17v1a3 3 0 0 0 6 0v-1"/></svg>
-    <span id="title"></span>
+    <span class="title" id="title"></span>
   </div>
-  <div class="cam" id="cam"><div class="bar" id="bar"></div></div>
+  <div class="cam" id="cam"><div class="hint">Taste drücken zum Schließen</div><div class="bar" id="bar"></div></div>
 </div>
 <script>
   const q = new URLSearchParams(location.search);
@@ -41,16 +45,17 @@
     const img = new Image();
     img.src = src;
     cam.insertBefore(img, cam.firstChild);
-    const live = document.createElement('div'); live.className = 'live'; live.textContent = 'LIVE'; cam.appendChild(live);
+    const live = document.createElement('div'); live.className = 'live';
+    live.innerHTML = '<i></i><span>Live</span>';
+    cam.appendChild(live);
     if (src.indexOf('/camera_proxy/') >= 0) {
       setInterval(() => { img.src = src + '&_=' + Date.now(); }, 1500);
-      live.textContent = 'BILD';
+      live.lastChild.textContent = 'Bild';
     }
   } else {
     const n = document.createElement('div'); n.className = 'none'; n.textContent = 'Kein Kamerabild'; cam.appendChild(n);
   }
-  const bar = document.getElementById('bar');
-  bar.animate([{ transform: 'scaleX(1)' }, { transform: 'scaleX(0)' }], { duration: secs * 1000, fill: 'forwards', easing: 'linear' });
+  document.getElementById('bar').animate([{ transform: 'scaleX(1)' }, { transform: 'scaleX(0)' }], { duration: secs * 1000, fill: 'forwards', easing: 'linear' });
 </script>
 </body>
 </html>

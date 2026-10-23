@@ -9,7 +9,7 @@
     bgMode: 'fixed', bgId: '01', bgInterval: 15, dim: 10, kenburns: 'on',
     artAfter: 5, artClock: 'big',
     smart: 'on', camPreview: 'live', appliances: 'on',
-    popupEnabled: true, popupPos: 'tr', popupSize: 'm', popupSeconds: 30, popupCam: 'live',
+    popupEnabled: true, popupPos: 'tr', popupSize: 'm', popupSeconds: 30, popupCam: 'live', camAspect: '4:3',
     favorites: [],
     haHost: '192.168.0.5', haPort: 80,
     haUrl: 'http://192.168.0.5', haUrlAlt: ['https://homeassistant.podolan.de', 'http://homeassistant.local'],
@@ -95,6 +95,7 @@
     { key: 'popupSize', label: 'Größe', opts: [['s', 'Klein'], ['m', 'Mittel'], ['l', 'Groß']] },
     { key: 'popupSeconds', label: 'Anzeigedauer', opts: [[15, '15 Sek.'], [30, '30 Sek.'], [60, '1 Min.'], [120, '2 Min.']] },
     { key: 'popupCam', label: 'Kamerabild im Popup', opts: [['live', 'Live'], ['still', 'Standbild']] },
+    { key: 'camAspect', label: 'Kamera-Format', opts: [['4:3', '4:3 (Reolink-Klingel)'], ['16:9', '16:9'], ['1:1', 'Quadratisch']] },
     { act: 'testpopup', label: 'Popup testen', icon: 'bell', value: () => (Android.canOverlay() ? '' : 'Berechtigung fehlt') },
     { section: 'System' },
     { act: 'setup', label: 'Am Handy verwalten (Apps, Fotos)', icon: 'phone', value: () => '' },
@@ -223,11 +224,30 @@
       list.appendChild(h('div', { class: 'lrow' }, [h('div', { class: 'litem', 'data-f': true, 'data-pkg': a.pkg, _act: act },
         [h('div', { class: 'ico' }, [appIcon(a)]), h('span', { text: a.label })])]));
     });
+    sizeDock();
     if (focusPkg) {
       const sel = (cfg.layout === 'list' ? '#listtrack' : '#docktrack') + ' [data-pkg="' + CSS.escape(focusPkg) + '"]';
       const el = $(sel); if (el) setFocus(el);
     }
   }
+
+  /** Verteilt die Apps so, dass im Dock immer nur ganze Kacheln zu sehen sind (höchstens 7 gleichzeitig). */
+  function dockInner() {
+    const d = $('#dock'); const cs = getComputedStyle(d);
+    return d.clientWidth - parseFloat(cs.paddingLeft) - parseFloat(cs.paddingRight);
+  }
+  function sizeDock() {
+    const track = $('#docktrack');
+    const items = track.querySelectorAll('.app');
+    if (!items.length || !$('#dock').clientWidth) return;
+    const gap = parseFloat(getComputedStyle(track).columnGap) || 0;
+    const k = Math.min(items.length, 7);
+    const w = (dockInner() - gap * (k - 1)) / k;
+    items.forEach((el) => (el.style.flex = '0 0 ' + w + 'px'));
+    dockOffset = Math.min(dockOffset, Math.max(0, track.scrollWidth - dockInner()));
+    track.style.transform = 'translateX(' + -dockOffset + 'px)';
+  }
+  window.addEventListener('resize', sizeDock);
 
   // ------------------------------------------------------------------ Fokus & Navigation
   let focused = null;
@@ -255,7 +275,7 @@
   let dockOffset = 0, listOffset = 0;
   function scrollIntoView(el) {
     if (el.closest('#docktrack')) {
-      const view = $('#dock').clientWidth - 16;
+      const view = dockInner() + 1;
       const left = el.offsetLeft, right = left + el.offsetWidth;
       if (right - dockOffset > view) dockOffset = right - view;
       if (left - dockOffset < 0) dockOffset = left;
@@ -419,7 +439,7 @@
     if (key === 'layout') { dockOffset = 0; listOffset = 0; renderApps(); }
     if (key === 'iconStyle' || key === 'labels' || key === 'textSize') renderApps();
     if (key && key.startsWith('bg')) { bgIndex = 0; loadBackgroundLists(); startBg(true); }
-    if (key === 'camPreview' || key === 'smart' || key === 'appliances') { renderSmart(true); renderStatus(); }
+    if (key === 'camPreview' || key === 'smart' || key === 'appliances' || key === 'camAspect') { renderSmart(true); renderStatus(); }
   }
   function settingsAction(a, s) {
     if (a === 'none') return;
@@ -699,7 +719,7 @@
       if (cfg.cameraEntity && cfg.camPreview !== 'off') {
         const img = h('img', { alt: '' });
         img.onerror = () => { camUrlSet = ''; };
-        const cam = h('div', { class: 'cam', 'data-f': true, _act: openCamera }, [img,
+        const cam = h('div', { class: 'cam', 'data-f': true, _act: openCamera, style: 'aspect-ratio:' + (cfg.camAspect || '4:3').replace(':', ' / ') }, [img,
           h('div', { class: 'camlbl' }, [cfg.camPreview === 'live' ? h('i', { class: 'live' }) : null, h('span', { text: cfg.cameraName || 'Haustür' })])]);
         box.appendChild(cam); smartEls.camImg = img;
       }
