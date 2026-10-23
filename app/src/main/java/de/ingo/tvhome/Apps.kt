@@ -166,7 +166,18 @@ object Apps {
             acc = 0
             for (v in 255 downTo 0) { acc += hist[v]; if (acc >= strong * 0.05) { hi = v; break } }
         }
-        val multiTone = hi - lo > 45
+        // Würden in reinem Weiß innere Details verloren gehen (z. B. Schrift auf einer Farbfläche)?
+        // Dafür innere Kanten (Helligkeitssprung innerhalb des Logos) mit der Außenkontur vergleichen.
+        var innerEdges = 0; var outerEdges = 0
+        for (y in 0 until h - 1) for (x in 0 until w - 1) {
+            val i = y * w + x
+            if (alpha[i] <= 160) continue
+            for (j in intArrayOf(i + 1, i + w)) {
+                if (alpha[j] > 160) { if (Math.abs(lum[i] - lum[j]) > 40) innerEdges++ }
+                else if (alpha[j] < 60) outerEdges++
+            }
+        }
+        val multiTone = hi - lo > 45 && innerEdges > outerEdges * 0.25
         // 3. Graustufen: einfarbige Logos werden reinweiß, mehrfarbige behalten ihre Abstufungen (hell bis mittelgrau).
         val out = IntArray(w * h)
         for (i in 0 until w * h) {

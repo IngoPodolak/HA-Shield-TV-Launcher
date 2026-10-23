@@ -71,7 +71,7 @@
     { key: 'layout', label: 'Layout', opts: [['dock', 'Dock'], ['list', 'Liste']] },
     { key: 'material', label: 'Material', opts: [['clear', 'Klar getönt'], ['frost', 'Milchglas'], ['dark', 'Dunkel getönt'], ['none', 'Ohne']] },
     { key: 'focus', label: 'Fokus', opts: [['glass', 'Glas'], ['glow', 'Leuchten'], ['lift', 'Vergrößern'], ['outline', 'Rahmen']] },
-    { key: 'iconStyle', label: 'App-Symbole', opts: [['white', 'Logo hell (Graustufen)'], ['color', 'Farbig'], ['banner', 'TV-Banner']] },
+    { key: 'iconStyle', label: 'App-Symbole', opts: [['white', 'Weißes Logo'], ['color', 'Farbig'], ['banner', 'TV-Banner']] },
     { key: 'labels', label: 'App-Namen im Dock', opts: [['on', 'Anzeigen'], ['off', 'Ausblenden']] },
     { key: 'clock', label: 'Uhr', opts: [['24', '24 Std.'], ['12', '12 Std.'], ['off', 'Aus']] },
     { key: 'date', label: 'Datum', opts: [['on', 'An'], ['off', 'Aus']] },
@@ -229,7 +229,7 @@
     const cur = (cfg.iconOverrides || {})[a.pkg] || '';
     const mark = (v) => (v === cur ? '  ✓' : '');
     menu('Symbol für ' + a.label, [
-      { label: 'Logo hell (Graustufen)' + mark('mono'), act: () => setIconStyle(a, 'mono') },
+      { label: 'Weißes Logo' + mark('mono'), act: () => setIconStyle(a, 'mono') },
       { label: 'Farbiges Symbol' + mark('color'), act: () => setIconStyle(a, 'color') },
       { label: 'TV-Banner' + mark('banner'), act: () => setIconStyle(a, 'banner') },
       { label: 'Wie alle anderen' + mark(''), act: () => setIconStyle(a, '') }
