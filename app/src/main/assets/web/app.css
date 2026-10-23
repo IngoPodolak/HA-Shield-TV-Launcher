@@ -305,3 +305,9 @@ body.move-mode .app:not(.moving), body.move-mode .litem:not(.moving) { opacity: 
 }
 body.layout-list #movehint { bottom: auto; top: 3vh; }
 body.move-mode #movehint { opacity: 1; }
+
+/* Weißer Schriftzug aus dem Banner */
+.app .ico.ico-bannermono { width: 11vw; height: 4.4vw; }
+.ico.ico-bannermono img { width: 100%; height: 100%; object-fit: contain; filter: drop-shadow(0 1px 6px rgba(0,0,0,.25)); }
+.litem .ico.ico-bannermono { width: 6.6vw; height: 2.4vw; }
+.tile .ico.ico-bannermono { width: 9vw; height: 3.6vw; }

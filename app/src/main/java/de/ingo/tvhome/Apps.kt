@@ -86,6 +86,9 @@ object Apps {
                     if (b != null) png(render(b, 320, 180)) else icon(ctx, pkg)?.let { png(render(it, 192, 192)) }
                 }
                 "mono" -> mono(ctx, pkg)?.let { png(it) } ?: icon(ctx, pkg)?.let { png(render(it, 192, 192)) }
+                // Weißer Schriftzug aus dem TV-Banner; ohne Banner das weiße Symbol.
+                "bannermono" -> banner(ctx, pkg)?.let { toWhite(render(it, 320, 180), 360, 120) }?.let { png(it) }
+                    ?: mono(ctx, pkg)?.let { png(it) } ?: icon(ctx, pkg)?.let { png(render(it, 192, 192)) }
                 else -> icon(ctx, pkg)?.let { png(render(it, 192, 192)) }
             }
         } catch (e: Exception) { null }
@@ -119,7 +122,7 @@ object Apps {
         return toWhite(render(d, size, size))
     }
 
-    private fun toWhite(bmp: Bitmap): Bitmap? {
+    private fun toWhite(bmp: Bitmap, outW: Int = 192, outH: Int = 192): Bitmap? {
         val w = bmp.width; val h = bmp.height
         val px = IntArray(w * h)
         bmp.getPixels(px, 0, w, 0, 0, w, h)
@@ -197,12 +200,11 @@ object Apps {
         // Logo zuschneiden und mittig in ein Quadrat setzen, damit alle Logos gleich groß wirken.
         val cw = maxX - minX + 1; val ch = maxY - minY + 1
         val crop = Bitmap.createBitmap(res, minX, minY, cw, ch)
-        val side = 192
         val pad = 4
-        val scale = minOf((side - 2 * pad).toFloat() / cw, (side - 2 * pad).toFloat() / ch)
+        val scale = minOf((outW - 2 * pad).toFloat() / cw, (outH - 2 * pad).toFloat() / ch)
         val sw = (cw * scale).toInt().coerceAtLeast(1); val sh = (ch * scale).toInt().coerceAtLeast(1)
-        val outBmp = Bitmap.createBitmap(side, side, Bitmap.Config.ARGB_8888)
-        Canvas(outBmp).drawBitmap(Bitmap.createScaledBitmap(crop, sw, sh, true), ((side - sw) / 2).toFloat(), ((side - sh) / 2).toFloat(), null)
+        val outBmp = Bitmap.createBitmap(outW, outH, Bitmap.Config.ARGB_8888)
+        Canvas(outBmp).drawBitmap(Bitmap.createScaledBitmap(crop, sw, sh, true), ((outW - sw) / 2).toFloat(), ((outH - sh) / 2).toFloat(), null)
         return outBmp
     }
 
