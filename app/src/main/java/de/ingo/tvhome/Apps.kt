@@ -148,39 +148,58 @@ object Apps {
         val w = bmp.width; val h = bmp.height
         val px = IntArray(w * h)
         bmp.getPixels(px, 0, w, 0, 0, w, h)
-        val inset = 4
-        val corners = intArrayOf(
-            px[inset * w + inset], px[inset * w + (w - 1 - inset)],
-            px[(h - 1 - inset) * w + inset], px[(h - 1 - inset) * w + (w - 1 - inset)]
-        )
-        val opaqueCorners = corners.filter { Color.alpha(it) > 200 }
-        val useBg = opaqueCorners.size >= 3
-        val br = if (useBg) opaqueCorners.map { Color.red(it) }.average() else 0.0
-        val bgc = if (useBg) opaqueCorners.map { Color.green(it) }.average() else 0.0
-        val bb = if (useBg) opaqueCorners.map { Color.blue(it) }.average() else 0.0
+        // Hintergrund an den vier Ecken messen (Mittelwert eines kleinen Feldes). Zwischen den Ecken wird er als
+        // Verlauf angenommen – so werden auch Farbverläufe (z. B. Disney+) sauber entfernt.
+        val inset = maxOf(4, minOf(w, h) / 40)
+        val blk = maxOf(2, minOf(w, h) / 60)
+        fun cornerAt(cx: Int, cy: Int): DoubleArray? {
+            var r = 0.0; var g = 0.0; var b = 0.0; var n = 0
+            for (yy in cy until minOf(h, cy + blk)) for (xx in cx until minOf(w, cx + blk)) {
+                val p = px[yy * w + xx]
+                if (Color.alpha(p) > 200) { r += Color.red(p); g += Color.green(p); b += Color.blue(p); n++ }
+            }
+            return if (n * 2 >= blk * blk) doubleArrayOf(r / n, g / n, b / n) else null
+        }
+        val c00 = cornerAt(inset, inset); val c10 = cornerAt(w - inset - blk, inset)
+        val c01 = cornerAt(inset, h - inset - blk); val c11 = cornerAt(w - inset - blk, h - inset - blk)
+        val found = listOfNotNull(c00, c10, c01, c11)
+        val useBg = found.size >= 3
+        val avg = if (found.isNotEmpty()) DoubleArray(3) { k -> found.map { it[k] }.average() } else DoubleArray(3)
+        val tl = c00 ?: avg; val tr = c10 ?: avg; val bl = c01 ?: avg; val brc = c11 ?: avg
 
         // 1. Durchgang: Deckkraft (Hintergrund raus) und Helligkeit jedes Pixels bestimmen.
         val alpha = IntArray(w * h)
         val lum = IntArray(w * h)
         val hist = IntArray(256)
         var minX = w; var minY = h; var maxX = -1; var maxY = -1; var covered = 0
-        for (y in 0 until h) for (x in 0 until w) {
-            val i = y * w + x
-            val p = px[i]
-            var a = Color.alpha(p)
-            if (useBg && a > 0) {
-                val dist = Math.abs(Color.red(p) - br) + Math.abs(Color.green(p) - bgc) + Math.abs(Color.blue(p) - bb)
-                a = (a * ((dist - 25) / 110.0).coerceIn(0.0, 1.0)).toInt()
+        for (y in 0 until h) {
+            val fy = y.toDouble() / (h - 1)
+            for (x in 0 until w) {
+                val i = y * w + x
+                val p = px[i]
+                var a = Color.alpha(p)
+                if (useBg && a > 0) {
+                    val fx = x.toDouble() / (w - 1)
+                    var dist = 0.0
+                    for (k in 0..2) {
+                        val bgv = (tl[k] * (1 - fx) + tr[k] * fx) * (1 - fy) + (bl[k] * (1 - fx) + brc[k] * fx) * fy
+                        val v = when (k) { 0 -> Color.red(p); 1 -> Color.green(p); else -> Color.blue(p) }
+                        dist += Math.abs(v - bgv)
+                    }
+                    a = (a * ((dist - 35) / 100.0).coerceIn(0.0, 1.0)).toInt()
+                }
+                if (a < 30) a = 0
+                alpha[i] = a
+                val l = (0.299 * Color.red(p) + 0.587 * Color.green(p) + 0.114 * Color.blue(p)).toInt().coerceIn(0, 255)
+                lum[i] = l
+                if (a > 90) {
+                    covered++
+                    if (x < minX) minX = x; if (x > maxX) maxX = x
+                    if (y < minY) minY = y; if (y > maxY) maxY = y
+                }
+                // Nur voll deckende Pixel zählen für die Farbtöne (Kantenglättung verfälscht sonst das Ergebnis).
+                if (a >= 250) hist[l]++
             }
-            alpha[i] = a
-            val l = (0.299 * Color.red(p) + 0.587 * Color.green(p) + 0.114 * Color.blue(p)).toInt().coerceIn(0, 255)
-            lum[i] = l
-            if (a > 24) {
-                covered++
-                if (x < minX) minX = x; if (x > maxX) maxX = x
-                if (y < minY) minY = y; if (y > maxY) maxY = y
-            }
-            if (a > 160) hist[l]++
         }
         // 2. Helligkeitsbereich des Logos (ohne Ausreißer an den Kanten).
         val strong = hist.sum()
@@ -212,7 +231,7 @@ object Apps {
         // 3. Graustufen: einfarbige Logos werden reinweiß, mehrfarbige behalten ihre Abstufungen (hell bis mittelgrau).
         val out = IntArray(w * h)
         for (i in 0 until w * h) {
-            val g = if (multiTone) (130 + (lum[i] - lo).coerceIn(0, hi - lo) * 125 / (hi - lo)) else 255
+            val g = if (multiTone) (150 + (lum[i] - lo).coerceIn(0, hi - lo) * 105 / (hi - lo)) else 255
             out[i] = Color.argb(alpha[i], g, g, g)
         }
         val ratio = covered.toDouble() / (w * h)
