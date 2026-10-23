@@ -118,6 +118,7 @@ object Overlay {
                 (r.context.getSystemService(Context.WINDOW_SERVICE) as WindowManager).removeView(r)
             } catch (_: Exception) {}
             wv?.destroy()
+            Media.resumeIfWanted(r.context.applicationContext)
         }
     }
 }

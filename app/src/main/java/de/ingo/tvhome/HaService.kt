@@ -150,6 +150,7 @@ class HaService : Service() {
             val cfg = Config.get(ctx)
             if (!cfg.optBoolean("popupEnabled", true)) return
             val cam = cfg.optString("cameraEntity", "")
+            Media.pauseIfPlaying(ctx)
             Thread {
                 val camUrl = if (cam.isNotEmpty()) Ha.cameraUrl(ctx, cam, cfg.optString("popupCam", "live") == "live") else null
                 Overlay.show(ctx, camUrl, cfg.optString("popupTitle", "Es klingelt an der Haustür"))
