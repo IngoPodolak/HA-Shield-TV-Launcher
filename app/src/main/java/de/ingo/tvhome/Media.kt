@@ -18,18 +18,22 @@ object Media {
 
     /** Beim Klingeln: nur pausieren, wenn gerade wirklich etwas läuft. */
     fun pauseIfPlaying(ctx: Context) {
-        val mode = Config.get(ctx).optString("ringPlayback", "pause")
+        val mode = Config.get(ctx).optString("ringPlayback", "resume")
         if (mode == "off") return
         val am = ctx.getSystemService(Context.AUDIO_SERVICE) as AudioManager
         if (!am.isMusicActive) return
         try { send(ctx, KeyEvent.KEYCODE_MEDIA_PAUSE); pausedByUs = true } catch (_: Exception) {}
     }
 
-    /** Beim Schließen des Popups: fortsetzen, falls so eingestellt und wir pausiert haben. */
-    fun resumeIfWanted(ctx: Context) {
+    /**
+     * Beim Schließen des Popups: fortsetzen, wenn es per Taste weggedrückt wurde, so eingestellt ist
+     * und wir pausiert haben. Läuft das Popup von selbst ab (man ist an der Tür), bleibt es pausiert.
+     */
+    fun resumeIfWanted(ctx: Context, byUser: Boolean) {
         if (!pausedByUs) return
         pausedByUs = false
-        if (Config.get(ctx).optString("ringPlayback", "pause") != "resume") return
+        if (!byUser) return
+        if (Config.get(ctx).optString("ringPlayback", "resume") != "resume") return
         try { send(ctx, KeyEvent.KEYCODE_MEDIA_PLAY) } catch (_: Exception) {}
     }
 }

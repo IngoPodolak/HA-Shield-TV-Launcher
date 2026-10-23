@@ -23,14 +23,14 @@ object Overlay {
     private val main = Handler(Looper.getMainLooper())
     private var root: FrameLayout? = null
     private var web: WebView? = null
-    private val hide = Runnable { remove() }
+    private val hide = Runnable { remove(byUser = false) }
 
     fun canShow(ctx: Context) = Settings.canDrawOverlays(ctx)
 
     /** Fenster-Container, der die Tasten abfängt, solange das Popup sichtbar ist. */
     private class KeyCatcher(ctx: Context) : FrameLayout(ctx) {
         override fun dispatchKeyEvent(event: KeyEvent): Boolean {
-            if (event.action == KeyEvent.ACTION_UP) remove()
+            if (event.action == KeyEvent.ACTION_UP) remove(byUser = true)
             return true
         }
     }
@@ -107,7 +107,7 @@ object Overlay {
         }
     }
 
-    fun remove() {
+    fun remove(byUser: Boolean = false) {
         main.post {
             main.removeCallbacks(hide)
             val r = root ?: return@post
@@ -118,7 +118,7 @@ object Overlay {
                 (r.context.getSystemService(Context.WINDOW_SERVICE) as WindowManager).removeView(r)
             } catch (_: Exception) {}
             wv?.destroy()
-            Media.resumeIfWanted(r.context.applicationContext)
+            Media.resumeIfWanted(r.context.applicationContext, byUser)
         }
     }
 }
