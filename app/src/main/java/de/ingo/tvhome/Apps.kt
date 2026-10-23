@@ -134,21 +134,44 @@ object Apps {
         val bgc = if (useBg) opaqueCorners.map { Color.green(it) }.average() else 0.0
         val bb = if (useBg) opaqueCorners.map { Color.blue(it) }.average() else 0.0
 
-        val out = IntArray(w * h)
+        // 1. Durchgang: Deckkraft (Hintergrund raus) und Helligkeit jedes Pixels bestimmen.
+        val alpha = IntArray(w * h)
+        val lum = IntArray(w * h)
+        val hist = IntArray(256)
         var minX = w; var minY = h; var maxX = -1; var maxY = -1; var covered = 0
         for (y in 0 until h) for (x in 0 until w) {
-            val p = px[y * w + x]
+            val i = y * w + x
+            val p = px[i]
             var a = Color.alpha(p)
             if (useBg && a > 0) {
                 val dist = Math.abs(Color.red(p) - br) + Math.abs(Color.green(p) - bgc) + Math.abs(Color.blue(p) - bb)
                 a = (a * ((dist - 45) * 3).coerceIn(0.0, 255.0) / 255.0).toInt()
             }
+            alpha[i] = a
+            val l = (0.299 * Color.red(p) + 0.587 * Color.green(p) + 0.114 * Color.blue(p)).toInt().coerceIn(0, 255)
+            lum[i] = l
             if (a > 24) {
                 covered++
                 if (x < minX) minX = x; if (x > maxX) maxX = x
                 if (y < minY) minY = y; if (y > maxY) maxY = y
             }
-            out[y * w + x] = Color.argb(a, 255, 255, 255)
+            if (a > 160) hist[l]++
+        }
+        // 2. Helligkeitsbereich des Logos (ohne Ausreißer an den Kanten).
+        val strong = hist.sum()
+        var lo = 0; var hi = 255
+        if (strong > 0) {
+            var acc = 0
+            for (v in 0..255) { acc += hist[v]; if (acc >= strong * 0.05) { lo = v; break } }
+            acc = 0
+            for (v in 255 downTo 0) { acc += hist[v]; if (acc >= strong * 0.05) { hi = v; break } }
+        }
+        val multiTone = hi - lo > 45
+        // 3. Graustufen: einfarbige Logos werden reinweiß, mehrfarbige behalten ihre Abstufungen (hell bis mittelgrau).
+        val out = IntArray(w * h)
+        for (i in 0 until w * h) {
+            val g = if (multiTone) (130 + (lum[i] - lo).coerceIn(0, hi - lo) * 125 / (hi - lo)) else 255
+            out[i] = Color.argb(alpha[i], g, g, g)
         }
         val ratio = covered.toDouble() / (w * h)
         if (maxX < 0 || ratio < 0.01 || ratio > 0.8) return null
