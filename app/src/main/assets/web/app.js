@@ -222,11 +222,40 @@
     if (i >= 0) { f.splice(i, 1); toast(a.label + ' aus der Leiste entfernt'); } else { f.push(a.pkg); toast(a.label + ' zur Leiste hinzugefügt'); }
     saveCfg({ favorites: f }); renderApps();
   }
+  // ---- Verschiebe-Modus: OK lange drücken hebt die App an, Pfeile verschieben, OK speichert, Zurück bricht ab.
+  let moving = null;
+  function markMoving() {
+    document.querySelectorAll('.moving').forEach((el) => el.classList.remove('moving'));
+    if (moving && focused) focused.classList.add('moving');
+  }
+  function startMove(a) {
+    ensureFavs();
+    moving = { a, original: cfg.favorites.slice() };
+    document.body.classList.add('move-mode');
+    markMoving();
+    const v = cfg.layout === 'list';
+    $('#movehint').textContent = (v ? '▲ ▼' : '◀ ▶') + ' verschieben   ·   OK fertig   ·   Zurück abbrechen   ·   ' + (v ? '▶' : '▼') + ' mehr';
+  }
+  function endMove(save) {
+    if (!moving) return;
+    const m = moving; moving = null;
+    document.body.classList.remove('move-mode');
+    if (!save) { saveCfg({ favorites: m.original }); renderApps(m.a.pkg); toast('Abgebrochen'); }
+    else toast('Reihenfolge gespeichert');
+    markMoving();
+    return m.a;
+  }
+  /** Tasten im Verschiebe-Modus. Gibt true zurück, wenn die Taste verbraucht wurde. */
+  function moveKey(k) {
+    const v = cfg.layout === 'list';
+    const back = v ? 'ArrowUp' : 'ArrowLeft', fwd = v ? 'ArrowDown' : 'ArrowRight', more = v ? 'ArrowRight' : 'ArrowDown';
+    if (k === back || k === fwd) { moveFav(moving.a.pkg, k === back ? -1 : 1); markMoving(); return true; }
+    if (k === more) { const a = endMove(true); appMenu(a); return true; }
+    return true;
+  }
   function appMenu(a) {
-    const vertical = cfg.layout === 'list';
     menu(a.label, [
-      { label: vertical ? 'Nach oben verschieben' : 'Nach links verschieben', act: () => moveFav(a.pkg, -1) },
-      { label: vertical ? 'Nach unten verschieben' : 'Nach rechts verschieben', act: () => moveFav(a.pkg, 1) },
+      { label: 'Verschieben', act: () => { renderApps(a.pkg); startMove(a); } },
       { label: 'Symbol ändern …', act: () => iconMenu(a) },
       { label: 'Aus der Leiste entfernen', act: () => toggleFav(a) }
     ]);
@@ -247,7 +276,7 @@
     const dock = $('#docktrack'); dock.innerHTML = '';
     const list = $('#listtrack'); list.innerHTML = '';
     favs.forEach((a) => {
-      const act = (long) => (long ? appMenu(a) : launch(a));
+      const act = (long) => (long ? startMove(a) : launch(a));
       dock.appendChild(h('div', { class: 'app', 'data-f': true, 'data-pkg': a.pkg, _act: act },
         [icoBox(a), h('div', { class: 'lbl', text: a.label })]));
       if (iconStyleOf(a) === 'banner') dock.lastChild.classList.add('has-banner');
@@ -363,6 +392,13 @@
     const k = e.key;
     const isEnter = k === 'Enter' || e.keyCode === 13 || e.keyCode === 23 || k === ' ';
     if (document.body.classList.contains('art')) { exitArt(); swallow = true; e.preventDefault(); return; }
+    if (moving) {
+      e.preventDefault();
+      if (e.repeat && (k === 'Enter' || e.keyCode === 13 || e.keyCode === 23)) return;
+      if (k === 'Enter' || e.keyCode === 13 || e.keyCode === 23 || k === ' ') { endMove(true); swallow = true; return; }
+      if (k === 'Escape' || k === 'Backspace' || k === 'GoBack') { endMove(false); return; }
+      moveKey(k); return;
+    }
     if (swallow && e.repeat) { e.preventDefault(); return; }
     swallow = false;
     if (k === 'ArrowLeft') move('left');
@@ -390,6 +426,7 @@
 
   function back() {
     lastKey = Date.now();
+    if (moving) { endMove(false); return; }
     if (document.body.classList.contains('art')) { exitArt(); return; }
     if (modals.length) { closeModal(); return; }
     setFocus(defaultFocus());
