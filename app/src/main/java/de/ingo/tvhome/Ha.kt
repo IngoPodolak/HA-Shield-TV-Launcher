@@ -1,7 +1,9 @@
 package de.ingo.tvhome
 
 import android.content.Context
+import okhttp3.MediaType.Companion.toMediaType
 import okhttp3.Request
+import okhttp3.RequestBody.Companion.toRequestBody
 import org.json.JSONArray
 import org.json.JSONObject
 
@@ -24,6 +26,27 @@ object Ha {
             }
         }
         return null
+    }
+
+    /** Dienst für mehrere Entitäten aufrufen, z. B. turn_off für Lampen und Schalter (nach Bereich gruppiert). */
+    fun callService(ctx: Context, service: String, ids: List<String>) {
+        val token = Config.haToken(ctx)
+        if (token.isEmpty()) return
+        val urls = Config.haUrls(ctx)
+        val ordered = (listOfNotNull(activeUrl?.takeIf { it in urls }) + urls).distinct()
+        for ((domain, group) in ids.groupBy { it.substringBefore('.') }) {
+            val body = JSONObject().put("entity_id", JSONArray(group)).toString()
+                .toRequestBody("application/json".toMediaType())
+            for (url in ordered) {
+                try {
+                    val req = Request.Builder().url("$url/api/services/$domain/$service")
+                        .header("Authorization", "Bearer $token").post(body).build()
+                    val ok = TvHomeApp.http.newCall(req).execute().use { it.isSuccessful }
+                    if (ok) { activeUrl = url; break }
+                } catch (_: Exception) {
+                }
+            }
+        }
     }
 
     fun state(ctx: Context, entityId: String): JSONObject? =

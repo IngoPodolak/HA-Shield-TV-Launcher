@@ -10,6 +10,7 @@
     artAfter: 5, artClock: 'big',
     smart: 'on', camPreview: 'live', appliances: 'on',
     popupEnabled: true, popupPos: 'tr', popupSize: 'm', popupSeconds: 30, popupCam: 'live', camAspect: '4:3', ringPlayback: 'resume',
+    cinemaEnabled: true, cinemaLights: [], cinemaOffDelay: 3, cinemaOnDelay: 8,
     favorites: [],
     haHost: '192.168.0.5', haPort: 80,
     haUrl: 'http://192.168.0.5', haUrlAlt: ['https://homeassistant.podolan.de', 'http://homeassistant.local'],
@@ -67,6 +68,11 @@
     { act: 'none', label: 'Wird verwendet', value: () => (HA.url || cfg.haUrl).replace(/^https?:\/\//, '') },
     { section: 'Geräte' }
   ].concat(ENTITY_ROWS.map((e) => ({ act: 'entity', entity: e, label: e.label, value: () => entityLabel(cfg[e.key]) }))).concat([
+    { section: 'Kinolicht' },
+    { act: 'cinemaLights', label: 'Lampen bei Wiedergabe aus', icon: 'film', value: () => cinemaSummary() },
+    { key: 'cinemaEnabled', label: 'Kinolicht', opts: [[true, 'An'], [false, 'Aus']] },
+    { key: 'cinemaOffDelay', label: 'Aus nach Wiedergabestart', opts: [[2, '2 Sek.'], [3, '3 Sek.'], [5, '5 Sek.'], [10, '10 Sek.']] },
+    { key: 'cinemaOnDelay', label: 'Wieder an nach Pause/Stopp', opts: [[5, '5 Sek.'], [8, '8 Sek.'], [15, '15 Sek.'], [30, '30 Sek.']] },
     { section: 'Darstellung' },
     { key: 'layout', label: 'Layout', opts: [['dock', 'Dock'], ['list', 'Liste']] },
     { key: 'material', label: 'Material', opts: [['clear', 'Klar getönt'], ['frost', 'Milchglas'], ['dark', 'Dunkel getönt'], ['none', 'Ohne']] },
@@ -469,6 +475,7 @@
     if (a === 'none') return;
     if (a === 'login') { toast('Anmeldeseite von Home Assistant wird geöffnet …'); Android.login(HA.url || cfg.haUrl); }
     else if (a === 'entity') openEntityPicker(s.entity);
+    else if (a === 'cinemaLights') openCinemaPicker();
     else if (a === 'bgpicker') openBgPicker();
     else if (a === 'testpopup') {
       if (!Android.canOverlay()) toast('Popup-Berechtigung fehlt – wird bei der Installation per Befehl gesetzt');
@@ -476,6 +483,44 @@
     } else if (a === 'setup') openSetup();
     else if (a === 'update') checkUpdate();
     else if (a === 'android') Android.openAndroidSettings();
+  }
+
+  function cinemaSummary() {
+    const l = cfg.cinemaLights || [];
+    if (!l.length) return 'keine gewählt';
+    return l.length === 1 ? entityLabel(l[0]) : l.length + ' Lampen';
+  }
+  /** Mehrfachauswahl der Lampen fürs Kinolicht. OK hakt an/ab, „Fertig“ speichert. */
+  function openCinemaPicker() {
+    const track = h('div', { class: 'scrolltrack' });
+    const sub = h('div', { class: 'sub', text: 'Lade Lampen aus Home Assistant …' });
+    const chosen = new Set(cfg.cinemaLights || []);
+    const done = h('div', { class: 'btn', 'data-f': true, _act: () => {
+      saveCfg({ cinemaLights: Array.from(chosen) }); closeModal(); refreshModals();
+      toast(chosen.size ? 'Kinolicht: ' + chosen.size + ' Lampe(n)' : 'Kinolicht: keine Lampen');
+    } }, [icon('check'), 'Fertig']);
+    openModal(h('div', { class: 'sheet', style: 'width:56vw;height:86vh' }, [
+      h('h2', {}, [icon('bulb'), 'Lampen bei Wiedergabe aus']), sub,
+      h('div', { class: 'scroll' }, [track]),
+      h('div', { style: 'display:flex;margin-top:1vw' }, [done])
+    ]));
+    HA.listStates().then((list) => {
+      list = list.filter((e) => ['light', 'switch'].includes(e.entity_id.split('.')[0]))
+        .sort((a, b) => (a.entity_id.startsWith('light.') ? 0 : 1) - (b.entity_id.startsWith('light.') ? 0 : 1)
+          || (a.attributes.friendly_name || a.entity_id).localeCompare(b.attributes.friendly_name || b.entity_id));
+      sub.textContent = 'OK hakt eine Lampe an oder ab. Ausgeschaltet werden nur Lampen, die gerade an sind.';
+      list.forEach((e) => {
+        const mark = h('span', { class: 'val' });
+        const draw = () => { mark.innerHTML = ''; if (chosen.has(e.entity_id)) mark.appendChild(icon('check', 'arr')); };
+        const row = h('div', { class: 'row', 'data-f': true, _act: () => {
+          if (chosen.has(e.entity_id)) chosen.delete(e.entity_id); else chosen.add(e.entity_id);
+          row.classList.toggle('current', chosen.has(e.entity_id)); draw();
+        } }, [h('div', {}, [h('div', { text: e.attributes.friendly_name || e.entity_id }), h('div', { class: 'hint', text: e.entity_id })]), mark]);
+        if (chosen.has(e.entity_id)) row.classList.add('current');
+        draw(); track.appendChild(row);
+      });
+      setFocus(track.querySelector('[data-f]') || done);
+    }).catch((err) => { sub.textContent = err.message + ' – bitte zuerst anmelden.'; setFocus(done); });
   }
 
   function openEntityPicker(def) {
@@ -835,7 +880,19 @@
     const hasColor = modes.some((m) => ['hs', 'rgb', 'rgbw', 'rgbww', 'xy'].includes(m));
     const tBtnTxt = h('span'); const st = h('div', { class: 'sub' });
     const tBtn = h('div', { class: 'btn', 'data-f': true, _act: () => HA.call(dom, 'toggle', id) }, [icon('power'), tBtnTxt]);
-    const kids = [h('h2', {}, [icon('bulb'), cfg.lightName || nameOf(id, 'Licht')]), st, h('div', { style: 'display:flex;margin-bottom:.8vw' }, [tBtn])];
+    const cTxt = h('span');
+    const cBtn = h('div', { class: 'btn', 'data-f': true, _act: () => {
+      if (!(cfg.cinemaLights || []).length) { openCinemaPicker(); return; }
+      saveCfg({ cinemaEnabled: !cfg.cinemaEnabled }); updCinema();
+      toast(cfg.cinemaEnabled ? 'Kinolicht an' : 'Kinolicht aus');
+    } }, [icon('film'), cTxt]);
+    const updCinema = () => {
+      const has = (cfg.cinemaLights || []).length > 0;
+      cTxt.textContent = !has ? 'Kinolicht einrichten' : cfg.cinemaEnabled ? 'Kinolicht: an' : 'Kinolicht: aus';
+      cBtn.classList.toggle('on', has && !!cfg.cinemaEnabled);
+    };
+    updCinema();
+    const kids = [h('h2', {}, [icon('bulb'), cfg.lightName || nameOf(id, 'Licht')]), st, h('div', { style: 'display:flex;gap:.8vw;margin-bottom:.8vw' }, [tBtn, cBtn])];
     let bri = null, temp = null;
     if (dimmable) {
       bri = slider({ label: 'Helligkeit', min: 1, max: 100, step: 5, value: a.brightness ? Math.round(a.brightness / 2.55) : 50, fmt: (v) => v + ' %',
@@ -858,6 +915,7 @@
       const on = s.state === 'on';
       tBtnTxt.textContent = on ? 'Ausschalten' : 'Einschalten';
       tBtn.classList.toggle('on', on);
+      updCinema();
       st.textContent = lightInfo();
       if (bri && s.attributes.brightness) bri.setValue(Math.round(s.attributes.brightness / 2.55));
       if (temp && s.attributes.color_temp_kelvin) temp.setValue(Math.round(s.attributes.color_temp_kelvin / 100) * 100);
