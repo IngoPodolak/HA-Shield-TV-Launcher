@@ -148,10 +148,14 @@ object Apps {
         val w = bmp.width; val h = bmp.height
         val px = IntArray(w * h)
         bmp.getPixels(px, 0, w, 0, 0, w, h)
-        // Hintergrund schätzen: Bild in Felder teilen (Banner 16×9, Symbole 2×2) und je Feld die vorherrschende Farbe (Median) nehmen.
-        // Dünne Schrift und Logos fallen dabei kaum ins Gewicht, Verläufe und Lichtscheine werden so mit erkannt.
-        val gx = if (allowGray) 2 else 16; val gy = if (allowGray) 2 else 9
-        val cellR = DoubleArray(gx * gy); val cellG = DoubleArray(gx * gy); val cellB = DoubleArray(gx * gy)
+        // Hintergrund schätzen: Bild in Felder teilen (Banner 16×9, Symbole 8×8) und je Feld die vorherrschende
+        // Farbe (Median) messen. Der Bildrand gilt als Hintergrund. Von dort wächst der Hintergrund nach innen,
+        // aber nur über weiche Übergänge (Verlauf, Lichtschein) – scharfe Sprünge (Rand eines Logo-Kastens) stoppen ihn.
+        // Felder, die so nicht erreicht werden, bekommen den Wert ihrer Nachbarn.
+        val gx = if (allowGray) 8 else 16; val gy = if (allowGray) 8 else 9
+        val n = gx * gy
+        val med = Array(n) { DoubleArray(3) }
+        val valid = BooleanArray(n)
         var opaqueCells = 0
         for (cy in 0 until gy) for (cx in 0 until gx) {
             val x0 = cx * w / gx; val x1 = (cx + 1) * w / gx; val y0 = cy * h / gy; val y1 = (cy + 1) * h / gy
@@ -164,22 +168,64 @@ object Apps {
             val k = cy * gx + cx
             if (rs.size > 4) {
                 rs.sort(); gs.sort(); bs.sort()
-                cellR[k] = rs[rs.size / 2].toDouble(); cellG[k] = gs[gs.size / 2].toDouble(); cellB[k] = bs[bs.size / 2].toDouble()
-                opaqueCells++
-            } else { cellR[k] = -1.0 }
+                med[k][0] = rs[rs.size / 2].toDouble(); med[k][1] = gs[gs.size / 2].toDouble(); med[k][2] = bs[bs.size / 2].toDouble()
+                valid[k] = true; opaqueCells++
+            }
         }
         // Undurchsichtiger Hintergrund nur, wenn fast alle Felder deckend sind (sonst hat das Bild schon Transparenz).
-        val useBg = opaqueCells >= gx * gy * 0.85
+        val useBg = opaqueCells >= n * 0.85
+        val cellVal = Array(n) { DoubleArray(3) }
+        if (useBg) {
+            val acc = BooleanArray(n)
+            for (cy in 0 until gy) for (cx in 0 until gx) {
+                val k = cy * gx + cx
+                if (valid[k] && (cx == 0 || cy == 0 || cx == gx - 1 || cy == gy - 1)) { acc[k] = true; med[k].copyInto(cellVal[k]) }
+            }
+            val dirs = arrayOf(intArrayOf(1, 0), intArrayOf(-1, 0), intArrayOf(0, 1), intArrayOf(0, -1))
+            var changed = true
+            while (changed) {
+                changed = false
+                for (cy in 0 until gy) for (cx in 0 until gx) {
+                    val k = cy * gx + cx
+                    if (acc[k] || !valid[k]) continue
+                    for (d in dirs) {
+                        val nx = cx + d[0]; val ny = cy + d[1]
+                        if (nx < 0 || ny < 0 || nx >= gx || ny >= gy) continue
+                        val nk = ny * gx + nx
+                        if (!acc[nk]) continue
+                        val diff = Math.abs(med[k][0] - cellVal[nk][0]) + Math.abs(med[k][1] - cellVal[nk][1]) + Math.abs(med[k][2] - cellVal[nk][2])
+                        if (diff < 60) { acc[k] = true; med[k].copyInto(cellVal[k]); changed = true; break }
+                    }
+                }
+            }
+            var filled = acc.copyOf()
+            var guard = 0
+            while (filled.any { !it } && guard++ < gx + gy) {
+                val nf = filled.copyOf()
+                for (cy in 0 until gy) for (cx in 0 until gx) {
+                    val k = cy * gx + cx
+                    if (filled[k]) continue
+                    var r = 0.0; var g = 0.0; var b = 0.0; var c = 0
+                    for (d in dirs) {
+                        val nx = cx + d[0]; val ny = cy + d[1]
+                        if (nx < 0 || ny < 0 || nx >= gx || ny >= gy) continue
+                        val nk = ny * gx + nx
+                        if (filled[nk]) { r += cellVal[nk][0]; g += cellVal[nk][1]; b += cellVal[nk][2]; c++ }
+                    }
+                    if (c > 0) { cellVal[k][0] = r / c; cellVal[k][1] = g / c; cellVal[k][2] = b / c; nf[k] = true }
+                }
+                filled = nf
+            }
+        }
         fun bgAt(x: Int, y: Int, out: DoubleArray) {
             val fx = (x.toDouble() / w * gx - 0.5).coerceIn(0.0, gx - 1.0)
             val fy = (y.toDouble() / h * gy - 0.5).coerceIn(0.0, gy - 1.0)
             val x0 = fx.toInt(); val y0 = fy.toInt(); val x1 = minOf(x0 + 1, gx - 1); val y1 = minOf(y0 + 1, gy - 1)
             val tx = fx - x0; val ty = fy - y0
-            val ids = intArrayOf(y0 * gx + x0, y0 * gx + x1, y1 * gx + x0, y1 * gx + x1)
-            val ws = doubleArrayOf((1 - tx) * (1 - ty), tx * (1 - ty), (1 - tx) * ty, tx * ty)
-            var r = 0.0; var g = 0.0; var b = 0.0; var sw = 0.0
-            for (n in 0..3) if (cellR[ids[n]] >= 0) { r += cellR[ids[n]] * ws[n]; g += cellG[ids[n]] * ws[n]; b += cellB[ids[n]] * ws[n]; sw += ws[n] }
-            if (sw > 0) { out[0] = r / sw; out[1] = g / sw; out[2] = b / sw }
+            for (k in 0..2) {
+                out[k] = (cellVal[y0 * gx + x0][k] * (1 - tx) + cellVal[y0 * gx + x1][k] * tx) * (1 - ty) +
+                    (cellVal[y1 * gx + x0][k] * (1 - tx) + cellVal[y1 * gx + x1][k] * tx) * ty
+            }
         }
         val bgv = DoubleArray(3)
 
@@ -220,30 +266,44 @@ object Apps {
             acc = 0
             for (v in 255 downTo 0) { acc += hist[v]; if (acc >= strong * 0.05) { hi = v; break } }
         }
-        // Würden in reinem Weiß innere Details verloren gehen (z. B. Schrift auf einer Farbfläche)?
-        // Dafür innere Kanten (Helligkeitssprung innerhalb des Logos) mit der Außenkontur vergleichen.
-        // Nur deutliche Helligkeitssprünge zwischen voll deckenden Pixeln zählen (keine Schattierungen, keine Kantenglättung).
-        var innerEdges = 0; var outerEdges = 0
-        for (y in 0 until h - 1) for (x in 0 until w - 1) {
-            val i = y * w + x
-            if (alpha[i] <= 160) continue
-            for (j in intArrayOf(i + 1, i + w)) {
-                if (alpha[j] > 230 && alpha[i] > 230) { if (Math.abs(lum[i] - lum[j]) > 80) innerEdges++ }
-                else if (alpha[j] < 60) outerEdges++
+        // 3. Ausstanzen statt Graustufen: Liegt eine Fläche fast vollständig INNERHALB einer anders hellen Fläche
+        //    (Buchstaben in den RTL-Kästen, das Z im ZDF-Kreis, das Play-Dreieck), wird sie ausgeschnitten.
+        //    So entsteht ein einfarbiges Logo wie bei echten Monochrom-Logos – alles Übrige wird reinweiß.
+        if (hi - lo > 80) {
+            val mid = (lo + hi) / 2
+            val tone = ByteArray(w * h)
+            for (i in 0 until w * h) if (alpha[i] >= 120) tone[i] = if (lum[i] < mid) 1 else 2
+            val seen = BooleanArray(w * h)
+            val stack = IntArray(w * h)
+            val members = IntArray(w * h)
+            for (start in 0 until w * h) {
+                if (tone[start].toInt() == 0 || seen[start]) continue
+                val t = tone[start]
+                var sp = 0; var count = 0; var other = 0; var bgN = 0
+                stack[sp++] = start; seen[start] = true
+                while (sp > 0) {
+                    val i = stack[--sp]
+                    members[count++] = i
+                    val x = i % w; val y = i / w
+                    for (d in 0..3) {
+                        val nx = x + (if (d == 0) 1 else if (d == 1) -1 else 0)
+                        val ny = y + (if (d == 2) 1 else if (d == 3) -1 else 0)
+                        if (nx < 0 || ny < 0 || nx >= w || ny >= h) { bgN++; continue }
+                        val j = ny * w + nx
+                        when {
+                            tone[j] == t -> if (!seen[j]) { seen[j] = true; stack[sp++] = j }
+                            tone[j].toInt() != 0 -> other++
+                            alpha[j] < 60 -> bgN++
+                        }
+                    }
+                }
+                if (count >= 12 && other > 0 && other >= (other + bgN) * 0.75) {
+                    for (m in 0 until count) alpha[members[m]] = 0
+                }
             }
         }
-        // Anteil der helleren bzw. dunkleren Teilfläche: Ein kleines Detail (z. B. Play-Dreieck) reicht nicht.
-        val mid = (lo + hi) / 2
-        var darkPart = 0; var lightPart = 0
-        for (v in 0..255) { if (v < mid) darkPart += hist[v] else lightPart += hist[v] }
-        val minorShare = if (strong > 0) minOf(darkPart, lightPart).toDouble() / strong else 0.0
-        val multiTone = allowGray && hi - lo > 80 && innerEdges > outerEdges * 0.4 && minorShare > 0.12
-        // 3. Graustufen: einfarbige Logos werden reinweiß, mehrfarbige behalten ihre Abstufungen (hell bis mittelgrau).
         val out = IntArray(w * h)
-        for (i in 0 until w * h) {
-            val g = if (multiTone) (150 + (lum[i] - lo).coerceIn(0, hi - lo) * 105 / (hi - lo)) else 255
-            out[i] = Color.argb(alpha[i], g, g, g)
-        }
+        for (i in 0 until w * h) out[i] = Color.argb(alpha[i], 255, 255, 255)
         val ratio = covered.toDouble() / (w * h)
         if (maxX < 0 || ratio < 0.01 || ratio > 0.8) return null
         val res = Bitmap.createBitmap(w, h, Bitmap.Config.ARGB_8888)
