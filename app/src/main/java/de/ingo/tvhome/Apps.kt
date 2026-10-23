@@ -111,6 +111,9 @@ object Apps {
                 // Weißer Schriftzug aus dem TV-Banner; ohne Banner das weiße Symbol.
                 "bannermono" -> banner(ctx, pkg)?.let { toWhite(renderBanner(it), 720, 240, allowGray = false) }?.let { png(it) }
                     ?: mono(ctx, pkg)?.let { png(it) } ?: icon(ctx, pkg)?.let { png(render(it, 384, 384)) }
+                "knock" -> banner(ctx, pkg)?.let { toWhite(renderBanner(it), 720, 240, allowGray = false, knockout = true) }?.let { png(it) }
+                    ?: icon(ctx, pkg)?.let { toWhite(render(it, 384, 384), 384, 384, knockout = true) }?.let { png(it) }
+                    ?: icon(ctx, pkg)?.let { png(render(it, 384, 384)) }
                 else -> icon(ctx, pkg)?.let { png(render(it, 384, 384)) }
             }
         } catch (e: Exception) { null }
@@ -144,7 +147,7 @@ object Apps {
         return toWhite(render(d, size, size), size, size)
     }
 
-    private fun toWhite(bmp: Bitmap, outW: Int, outH: Int, allowGray: Boolean = true): Bitmap? {
+    fun toWhite(bmp: Bitmap, outW: Int, outH: Int, allowGray: Boolean = true, knockout: Boolean = false): Bitmap? {
         val w = bmp.width; val h = bmp.height
         val px = IntArray(w * h)
         bmp.getPixels(px, 0, w, 0, 0, w, h)
@@ -266,7 +269,51 @@ object Apps {
             acc = 0
             for (v in 255 downTo 0) { acc += hist[v]; if (acc >= strong * 0.05) { hi = v; break } }
         }
-        // 3. Logo einheitlich reinweiß (Ausstanzen innerer Flächen hat echte Logos mit Schattierungen zerstört).
+        // 3. Nur bei „Weiß ausgestanzt“ (pro App gewählt): Flächen, die fast ganz von einer anders hellen Fläche
+        //    umschlossen sind (Buchstaben in den RTL-Kästen, das Z im ZDF-Kreis), werden ausgeschnitten.
+        //    Trennung hell/dunkel nach Otsu – robust gegen leichte Schattierungen.
+        if (knockout && strong > 0 && hi - lo > 60) {
+            var total = 0.0; for (v in 0..255) total += v.toDouble() * hist[v]
+            var sumB = 0.0; var wB = 0; var best = 0.0; var thr = (lo + hi) / 2
+            for (t in 0..255) {
+                wB += hist[t]; if (wB == 0) continue
+                val wF = strong - wB; if (wF == 0) break
+                sumB += t.toDouble() * hist[t]
+                val mB = sumB / wB; val mF = (total - sumB) / wF
+                val between = wB.toDouble() * wF * (mB - mF) * (mB - mF)
+                if (between > best) { best = between; thr = t }
+            }
+            val tone = ByteArray(w * h)
+            for (i in 0 until w * h) if (alpha[i] >= 120) tone[i] = if (lum[i] <= thr) 1 else 2
+            val seen = BooleanArray(w * h)
+            val stack = IntArray(w * h)
+            val members = IntArray(w * h)
+            for (start in 0 until w * h) {
+                if (tone[start].toInt() == 0 || seen[start]) continue
+                val t = tone[start]
+                var sp = 0; var count = 0; var other = 0; var bgN = 0
+                stack[sp++] = start; seen[start] = true
+                while (sp > 0) {
+                    val i = stack[--sp]
+                    members[count++] = i
+                    val x = i % w; val y = i / w
+                    for (d in 0..3) {
+                        val nx = x + (if (d == 0) 1 else if (d == 1) -1 else 0)
+                        val ny = y + (if (d == 2) 1 else if (d == 3) -1 else 0)
+                        if (nx < 0 || ny < 0 || nx >= w || ny >= h) { bgN++; continue }
+                        val j = ny * w + nx
+                        when {
+                            tone[j] == t -> if (!seen[j]) { seen[j] = true; stack[sp++] = j }
+                            tone[j].toInt() != 0 -> other++
+                            alpha[j] < 60 -> bgN++
+                        }
+                    }
+                }
+                if (count >= 12 && other > 0 && other >= (other + bgN) * 0.8) {
+                    for (m in 0 until count) alpha[members[m]] = 0
+                }
+            }
+        }
         val out = IntArray(w * h)
         for (i in 0 until w * h) out[i] = Color.argb(alpha[i], 255, 255, 255)
         val ratio = covered.toDouble() / (w * h)

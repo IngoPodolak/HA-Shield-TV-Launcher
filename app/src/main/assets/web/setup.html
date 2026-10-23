@@ -107,7 +107,18 @@
   </section>
 
   <section>
-    <h2><span class="n">4</span>Eigene Hintergrundfotos</h2>
+    <h2><span class="n">4</span>Eigene Logos</h2>
+    <div class="hint">Für Apps, deren Logo in Weiß nicht gut aussieht. Am schärfsten wird eine <b>SVG- oder große PNG-Datei</b>, z. B. von Wikipedia („ZDF Logo svg“ suchen). Farbe und Hintergrund sind egal – der Hintergrund wird entfernt und das Logo automatisch weiß dargestellt.</div>
+    <label for="logoApp">App</label>
+    <select id="logoApp"></select>
+    <input id="logoFile" type="file" accept="image/*,.svg" hidden>
+    <button id="logoPick">Logo-Datei auswählen</button>
+    <div class="msg" id="logoMsg"></div>
+    <ul class="apps" id="logoList"></ul>
+  </section>
+
+  <section>
+    <h2><span class="n">5</span>Eigene Hintergrundfotos</h2>
     <div class="hint">Fotos werden automatisch verkleinert und auf den Shield übertragen. Danach am Fernseher unter Einstellungen → Hintergrund auswählen.</div>
     <input id="files" type="file" accept="image/*" multiple hidden>
     <button id="pick">Fotos auswählen</button>
@@ -140,6 +151,7 @@
       ['cameraName', 'lightName', 'fanName'].forEach((k) => ($(k).value = cfg[k] || ''));
       $('ver').textContent = 'TV Home ' + s.version + (s.overlay ? '' : ' · Hinweis: Popup-Berechtigung fehlt noch');
       renderApps();
+      renderLogos();
       if (cfg.haUrl && cfg.hasToken) loadEntities();
       loadPhotos();
     }).catch((e) => msg('haMsg', e.message, false));
@@ -253,6 +265,41 @@
     if (!fav.length) { msg('appMsg', 'Bitte mindestens eine App auswählen.', false); return; }
     post('/api/config', { favorites: fav }).then(() => { cfg.favorites = fav; msg('appMsg', 'Gespeichert.', true); })
       .catch((e) => msg('appMsg', e.message, false));
+  };
+
+  // ---------- Eigene Logos
+  function renderLogos() {
+    const sel = $('logoApp'); const cur = sel.value; sel.innerHTML = '';
+    const favs = (cfg.favorites && cfg.favorites.length) ? cfg.favorites : apps.map((a) => a.pkg);
+    favs.concat(apps.map((a) => a.pkg).filter((p) => !favs.includes(p))).forEach((pkg) => {
+      const a = apps.find((x) => x.pkg === pkg); if (a) sel.add(new Option(a.label, pkg));
+    });
+    if (cur) sel.value = cur;
+    const ul = $('logoList'); ul.innerHTML = '';
+    const logos = cfg.customLogos || {};
+    Object.keys(logos).forEach((pkg) => {
+      const a = apps.find((x) => x.pkg === pkg);
+      const li = document.createElement('li');
+      li.innerHTML = '<span style="background:#333;border-radius:8px;padding:6px 10px;display:inline-flex"><img alt="" style="height:28px;width:auto;max-width:140px;filter:brightness(0) invert(1)"></span><span class="l"></span><span class="mv"><button>Löschen</button></span>';
+      li.querySelector('img').src = '/api/logo?pkg=' + encodeURIComponent(pkg) + '&pin=' + PIN + '&v=' + Date.now();
+      li.querySelector('.l').textContent = a ? a.label : pkg;
+      li.querySelector('button').onclick = () => post('/api/logo/delete?pkg=' + encodeURIComponent(pkg), {}).then(() => { delete logos[pkg]; renderLogos(); });
+      ul.appendChild(li);
+    });
+  }
+  $('logoPick').onclick = () => $('logoFile').click();
+  $('logoFile').onchange = async () => {
+    const f = $('logoFile').files[0]; if (!f) return;
+    const pkg = $('logoApp').value;
+    msg('logoMsg', 'Übertrage …', true);
+    try {
+      const r = await fetch('/api/logo?pkg=' + encodeURIComponent(pkg) + '&name=' + encodeURIComponent(f.name) + '&pin=' + PIN, { method: 'POST', body: f });
+      if (!r.ok) { const j = await r.json().catch(() => ({})); throw new Error(j.error || 'Upload fehlgeschlagen'); }
+      cfg.customLogos = Object.assign({}, cfg.customLogos || {}); cfg.customLogos[pkg] = 1;
+      msg('logoMsg', 'Gespeichert – auf dem Fernseher wird jetzt dein Logo angezeigt.', true);
+      renderLogos();
+    } catch (e) { msg('logoMsg', e.message, false); }
+    $('logoFile').value = '';
   };
 
   // ---------- Fotos

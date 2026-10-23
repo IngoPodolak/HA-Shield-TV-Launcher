@@ -311,3 +311,10 @@ body.move-mode #movehint { opacity: 1; }
 .ico.ico-bannermono img { width: 100%; height: 100%; object-fit: contain; filter: drop-shadow(0 1px 6px rgba(0,0,0,.25)); }
 .litem .ico.ico-bannermono { width: 6.6vw; height: 2.4vw; }
 .tile .ico.ico-bannermono { width: 9vw; height: 3.6vw; }
+
+/* Weiß ausgestanzt und eigene Logos: gleiche Größe wie der weiße Schriftzug */
+.app .ico.ico-knock, .app .ico.ico-custom { width: 11vw; height: 4.4vw; }
+.ico.ico-knock img, .ico.ico-custom img { width: 100%; height: 100%; object-fit: contain; filter: drop-shadow(0 1px 6px rgba(0,0,0,.25)); }
+.ico.ico-custom img { filter: brightness(0) invert(1) drop-shadow(0 1px 6px rgba(0,0,0,.25)); }
+.litem .ico.ico-knock, .litem .ico.ico-custom { width: 6.6vw; height: 2.4vw; }
+.tile .ico.ico-knock, .tile .ico.ico-custom { width: 9vw; height: 3.6vw; }

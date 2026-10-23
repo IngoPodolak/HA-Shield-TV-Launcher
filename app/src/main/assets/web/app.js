@@ -199,6 +199,10 @@
     saveCfg({ iconOverrides: o }); renderApps(a.pkg);
   }
   function appIcon(a, forceStyle) {
+    if ((forceStyle || iconStyleOf(a)) === 'custom') {
+      const u = (cfg.customLogos || {})[a.pkg];
+      if (u) return h('img', { src: u });
+    }
     const style = forceStyle || iconStyleOf(a);
     const key = a.pkg + '|' + style;
     if (!(key in iconCache)) { try { iconCache[key] = Android.getIcon(a.pkg, style) || ''; } catch (e) { iconCache[key] = ''; } }
@@ -266,6 +270,10 @@
     menu('Symbol für ' + a.label, [
       { label: 'Weißes Logo' + mark('mono'), act: () => setIconStyle(a, 'mono') },
       { label: 'Weißer Schriftzug (Banner)' + mark('bannermono'), act: () => setIconStyle(a, 'bannermono') },
+      { label: 'Weiß ausgestanzt' + mark('knock'), act: () => setIconStyle(a, 'knock') },
+      { label: ((cfg.customLogos || {})[a.pkg] ? 'Eigenes Logo' : 'Eigenes Logo (am Handy hochladen)') + mark('custom'), act: () => {
+        if ((cfg.customLogos || {})[a.pkg]) setIconStyle(a, 'custom'); else openSetup();
+      } },
       { label: 'Farbiges Symbol' + mark('color'), act: () => setIconStyle(a, 'color') },
       { label: 'TV-Banner' + mark('banner'), act: () => setIconStyle(a, 'banner') },
       { label: 'Wie alle anderen' + mark(''), act: () => setIconStyle(a, '') }
@@ -280,7 +288,7 @@
       const act = (long) => (long ? startMove(a) : launch(a));
       dock.appendChild(h('div', { class: 'app', 'data-f': true, 'data-pkg': a.pkg, _act: act },
         [icoBox(a), h('div', { class: 'lbl', text: a.label })]));
-      if (iconStyleOf(a) === 'banner' || iconStyleOf(a) === 'bannermono') dock.lastChild.classList.add('has-banner');
+      if (['banner', 'bannermono', 'knock', 'custom'].includes(iconStyleOf(a))) dock.lastChild.classList.add('has-banner');
       list.appendChild(h('div', { class: 'lrow' }, [h('div', { class: 'litem', 'data-f': true, 'data-pkg': a.pkg, _act: act },
         [icoBox(a), h('span', { text: a.label })])]));
     });
@@ -1014,9 +1022,9 @@
 
   // ------------------------------------------------------------------ Aufrufe von Android
   window.tvConfigChanged = () => {
-    const oldFav = JSON.stringify(cfg.favorites), oldBg = cfg.bgChanged;
+    const oldFav = JSON.stringify([cfg.favorites, cfg.customLogos, cfg.iconOverrides]), oldBg = cfg.bgChanged;
     loadCfg(); applyCfg(); connectHa();
-    if (JSON.stringify(cfg.favorites) !== oldFav) renderApps();
+    if (JSON.stringify([cfg.favorites, cfg.customLogos, cfg.iconOverrides]) !== oldFav) { for (const k in iconCache) delete iconCache[k]; renderApps(); }
     if (cfg.bgChanged !== oldBg) { loadBackgroundLists(); startBg(); }
     renderSmart(true); renderStatus(); refreshModals();
   };

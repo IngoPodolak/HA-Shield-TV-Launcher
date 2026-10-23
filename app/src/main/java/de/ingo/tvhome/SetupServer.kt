@@ -152,6 +152,23 @@ object SetupServer {
                         if (png == null) send(out, 404, "text/plain", ByteArray(0)) else send(out, 200, "image/png", png)
                     }
                     r.path == "/api/backgrounds" -> json(out, 200, Backgrounds.customJson(app))
+                    r.path == "/api/logo" && r.method == "POST" -> {
+                        val pkg = r.query["pkg"] ?: ""
+                        if (pkg.isEmpty() || r.body.isEmpty()) return json(out, 400, """{"error":"Datei oder App fehlt"}""")
+                        if (r.body.size > 8_000_000) return json(out, 400, """{"error":"Datei zu groß (max. 8 MB)"}""")
+                        try { Logos.save(app, pkg, r.query["name"] ?: "logo.png", r.body) }
+                        catch (e: Exception) { return json(out, 400, JSONObject().put("error", e.message ?: "Bild unbrauchbar").toString()) }
+                        json(out, 200, """{"ok":true}""")
+                    }
+                    r.path == "/api/logo/delete" && r.method == "POST" -> {
+                        Logos.delete(app, r.query["pkg"] ?: "")
+                        json(out, 200, """{"ok":true}""")
+                    }
+                    r.path == "/api/logo" -> {
+                        val f = Logos.file(app, r.query["pkg"] ?: "")
+                        if (f == null) send(out, 404, "text/plain", ByteArray(0))
+                        else send(out, 200, if (f.extension == "svg") "image/svg+xml" else "image/" + f.extension, f.readBytes())
+                    }
                     r.path == "/api/background" && r.method == "POST" -> {
                         if (r.body.isEmpty()) return json(out, 400, """{"error":"Leere Datei"}""")
                         val name = Backgrounds.saveCustom(app, r.query["name"] ?: "foto", r.body)
