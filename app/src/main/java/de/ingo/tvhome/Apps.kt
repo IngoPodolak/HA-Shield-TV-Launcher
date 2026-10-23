@@ -168,16 +168,22 @@ object Apps {
         }
         // Würden in reinem Weiß innere Details verloren gehen (z. B. Schrift auf einer Farbfläche)?
         // Dafür innere Kanten (Helligkeitssprung innerhalb des Logos) mit der Außenkontur vergleichen.
+        // Nur deutliche Helligkeitssprünge zwischen voll deckenden Pixeln zählen (keine Schattierungen, keine Kantenglättung).
         var innerEdges = 0; var outerEdges = 0
         for (y in 0 until h - 1) for (x in 0 until w - 1) {
             val i = y * w + x
             if (alpha[i] <= 160) continue
             for (j in intArrayOf(i + 1, i + w)) {
-                if (alpha[j] > 160) { if (Math.abs(lum[i] - lum[j]) > 40) innerEdges++ }
+                if (alpha[j] > 230 && alpha[i] > 230) { if (Math.abs(lum[i] - lum[j]) > 80) innerEdges++ }
                 else if (alpha[j] < 60) outerEdges++
             }
         }
-        val multiTone = hi - lo > 45 && innerEdges > outerEdges * 0.25
+        // Anteil der helleren bzw. dunkleren Teilfläche: Ein kleines Detail (z. B. Play-Dreieck) reicht nicht.
+        val mid = (lo + hi) / 2
+        var darkPart = 0; var lightPart = 0
+        for (v in 0..255) { if (v < mid) darkPart += hist[v] else lightPart += hist[v] }
+        val minorShare = if (strong > 0) minOf(darkPart, lightPart).toDouble() / strong else 0.0
+        val multiTone = hi - lo > 80 && innerEdges > outerEdges * 0.4 && minorShare > 0.12
         // 3. Graustufen: einfarbige Logos werden reinweiß, mehrfarbige behalten ihre Abstufungen (hell bis mittelgrau).
         val out = IntArray(w * h)
         for (i in 0 until w * h) {

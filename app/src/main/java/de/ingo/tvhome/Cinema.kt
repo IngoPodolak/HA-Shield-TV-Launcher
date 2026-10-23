@@ -59,7 +59,7 @@ object Cinema {
         } else {
             playingSince = 0
             if (silentSince == 0L) silentSince = now
-            val onDelay = cfg.optInt("cinemaOnDelay", 8) * 1000L
+            val onDelay = cfg.optInt("cinemaOnDelay", 3) * 1000L
             if (lightsOff && !busy && now - silentSince >= onDelay) restore(ctx)
         }
     }
