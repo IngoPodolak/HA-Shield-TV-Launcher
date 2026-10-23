@@ -109,7 +109,7 @@ object Apps {
                 }
                 "mono" -> mono(ctx, pkg)?.let { png(it) } ?: icon(ctx, pkg)?.let { png(render(it, 384, 384)) }
                 // Weißer Schriftzug aus dem TV-Banner; ohne Banner das weiße Symbol.
-                "bannermono" -> banner(ctx, pkg)?.let { toWhite(renderBanner(it), 720, 240) }?.let { png(it) }
+                "bannermono" -> banner(ctx, pkg)?.let { toWhite(renderBanner(it), 720, 240, allowGray = false) }?.let { png(it) }
                     ?: mono(ctx, pkg)?.let { png(it) } ?: icon(ctx, pkg)?.let { png(render(it, 384, 384)) }
                 else -> icon(ctx, pkg)?.let { png(render(it, 384, 384)) }
             }
@@ -144,28 +144,44 @@ object Apps {
         return toWhite(render(d, size, size), size, size)
     }
 
-    private fun toWhite(bmp: Bitmap, outW: Int, outH: Int): Bitmap? {
+    private fun toWhite(bmp: Bitmap, outW: Int, outH: Int, allowGray: Boolean = true): Bitmap? {
         val w = bmp.width; val h = bmp.height
         val px = IntArray(w * h)
         bmp.getPixels(px, 0, w, 0, 0, w, h)
-        // Hintergrund an den vier Ecken messen (Mittelwert eines kleinen Feldes). Zwischen den Ecken wird er als
-        // Verlauf angenommen – so werden auch Farbverläufe (z. B. Disney+) sauber entfernt.
-        val inset = maxOf(4, minOf(w, h) / 40)
-        val blk = maxOf(2, minOf(w, h) / 60)
-        fun cornerAt(cx: Int, cy: Int): DoubleArray? {
-            var r = 0.0; var g = 0.0; var b = 0.0; var n = 0
-            for (yy in cy until minOf(h, cy + blk)) for (xx in cx until minOf(w, cx + blk)) {
+        // Hintergrund schätzen: Bild in Felder teilen (Banner 16×9, Symbole 2×2) und je Feld die vorherrschende Farbe (Median) nehmen.
+        // Dünne Schrift und Logos fallen dabei kaum ins Gewicht, Verläufe und Lichtscheine werden so mit erkannt.
+        val gx = if (allowGray) 2 else 16; val gy = if (allowGray) 2 else 9
+        val cellR = DoubleArray(gx * gy); val cellG = DoubleArray(gx * gy); val cellB = DoubleArray(gx * gy)
+        var opaqueCells = 0
+        for (cy in 0 until gy) for (cx in 0 until gx) {
+            val x0 = cx * w / gx; val x1 = (cx + 1) * w / gx; val y0 = cy * h / gy; val y1 = (cy + 1) * h / gy
+            val rs = ArrayList<Int>(); val gs = ArrayList<Int>(); val bs = ArrayList<Int>()
+            var yy = y0
+            while (yy < y1) { var xx = x0; while (xx < x1) {
                 val p = px[yy * w + xx]
-                if (Color.alpha(p) > 200) { r += Color.red(p); g += Color.green(p); b += Color.blue(p); n++ }
-            }
-            return if (n * 2 >= blk * blk) doubleArrayOf(r / n, g / n, b / n) else null
+                if (Color.alpha(p) > 200) { rs.add(Color.red(p)); gs.add(Color.green(p)); bs.add(Color.blue(p)) }
+                xx += 2 }; yy += 2 }
+            val k = cy * gx + cx
+            if (rs.size > 4) {
+                rs.sort(); gs.sort(); bs.sort()
+                cellR[k] = rs[rs.size / 2].toDouble(); cellG[k] = gs[gs.size / 2].toDouble(); cellB[k] = bs[bs.size / 2].toDouble()
+                opaqueCells++
+            } else { cellR[k] = -1.0 }
         }
-        val c00 = cornerAt(inset, inset); val c10 = cornerAt(w - inset - blk, inset)
-        val c01 = cornerAt(inset, h - inset - blk); val c11 = cornerAt(w - inset - blk, h - inset - blk)
-        val found = listOfNotNull(c00, c10, c01, c11)
-        val useBg = found.size >= 3
-        val avg = if (found.isNotEmpty()) DoubleArray(3) { k -> found.map { it[k] }.average() } else DoubleArray(3)
-        val tl = c00 ?: avg; val tr = c10 ?: avg; val bl = c01 ?: avg; val brc = c11 ?: avg
+        // Undurchsichtiger Hintergrund nur, wenn fast alle Felder deckend sind (sonst hat das Bild schon Transparenz).
+        val useBg = opaqueCells >= gx * gy * 0.85
+        fun bgAt(x: Int, y: Int, out: DoubleArray) {
+            val fx = (x.toDouble() / w * gx - 0.5).coerceIn(0.0, gx - 1.0)
+            val fy = (y.toDouble() / h * gy - 0.5).coerceIn(0.0, gy - 1.0)
+            val x0 = fx.toInt(); val y0 = fy.toInt(); val x1 = minOf(x0 + 1, gx - 1); val y1 = minOf(y0 + 1, gy - 1)
+            val tx = fx - x0; val ty = fy - y0
+            val ids = intArrayOf(y0 * gx + x0, y0 * gx + x1, y1 * gx + x0, y1 * gx + x1)
+            val ws = doubleArrayOf((1 - tx) * (1 - ty), tx * (1 - ty), (1 - tx) * ty, tx * ty)
+            var r = 0.0; var g = 0.0; var b = 0.0; var sw = 0.0
+            for (n in 0..3) if (cellR[ids[n]] >= 0) { r += cellR[ids[n]] * ws[n]; g += cellG[ids[n]] * ws[n]; b += cellB[ids[n]] * ws[n]; sw += ws[n] }
+            if (sw > 0) { out[0] = r / sw; out[1] = g / sw; out[2] = b / sw }
+        }
+        val bgv = DoubleArray(3)
 
         // 1. Durchgang: Deckkraft (Hintergrund raus) und Helligkeit jedes Pixels bestimmen.
         val alpha = IntArray(w * h)
@@ -173,19 +189,13 @@ object Apps {
         val hist = IntArray(256)
         var minX = w; var minY = h; var maxX = -1; var maxY = -1; var covered = 0
         for (y in 0 until h) {
-            val fy = y.toDouble() / (h - 1)
             for (x in 0 until w) {
                 val i = y * w + x
                 val p = px[i]
                 var a = Color.alpha(p)
                 if (useBg && a > 0) {
-                    val fx = x.toDouble() / (w - 1)
-                    var dist = 0.0
-                    for (k in 0..2) {
-                        val bgv = (tl[k] * (1 - fx) + tr[k] * fx) * (1 - fy) + (bl[k] * (1 - fx) + brc[k] * fx) * fy
-                        val v = when (k) { 0 -> Color.red(p); 1 -> Color.green(p); else -> Color.blue(p) }
-                        dist += Math.abs(v - bgv)
-                    }
+                    bgAt(x, y, bgv)
+                    val dist = Math.abs(Color.red(p) - bgv[0]) + Math.abs(Color.green(p) - bgv[1]) + Math.abs(Color.blue(p) - bgv[2])
                     a = (a * ((dist - 35) / 100.0).coerceIn(0.0, 1.0)).toInt()
                 }
                 if (a < 30) a = 0
@@ -227,7 +237,7 @@ object Apps {
         var darkPart = 0; var lightPart = 0
         for (v in 0..255) { if (v < mid) darkPart += hist[v] else lightPart += hist[v] }
         val minorShare = if (strong > 0) minOf(darkPart, lightPart).toDouble() / strong else 0.0
-        val multiTone = hi - lo > 80 && innerEdges > outerEdges * 0.4 && minorShare > 0.12
+        val multiTone = allowGray && hi - lo > 80 && innerEdges > outerEdges * 0.4 && minorShare > 0.12
         // 3. Graustufen: einfarbige Logos werden reinweiß, mehrfarbige behalten ihre Abstufungen (hell bis mittelgrau).
         val out = IntArray(w * h)
         for (i in 0 until w * h) {
