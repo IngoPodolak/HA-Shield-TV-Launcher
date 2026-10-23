@@ -59,8 +59,7 @@ body.mat-none  { --glass-bg: transparent; --glass-border: transparent; --glass-b
 [data-f] { transition: background .16s, box-shadow .16s, transform .16s, color .16s; }
 body.focus-glass .focused {
   background: var(--focus-bg);
-  box-shadow: inset 0 0 0 1px rgba(255,255,255,.32), 0 .6vw 1.6vw rgba(0,0,0,.22);
-  -webkit-backdrop-filter: blur(16px); backdrop-filter: blur(16px);
+  box-shadow: inset 0 0 0 1px rgba(255,255,255,.28);
 }
 body.focus-glow .focused {
   background: rgba(255,255,255,.12);
@@ -104,12 +103,12 @@ body.layout-list #topicons { display: none; }
 /* ---------- Dock ---------- */
 #dock {
   position: absolute; left: 5vw; right: 5vw; bottom: 7vh; height: 15.5vh;
-  border-radius: 1.6vw; padding: .55vw; overflow: hidden;
+  border-radius: 1.8vw; padding: .9vw; overflow: hidden;
 }
 #docktrack { display: flex; gap: .3vw; height: 100%; transition: transform .35s cubic-bezier(.2,.8,.2,1); }
 .app {
   flex: 0 0 calc(13.3vw); height: 100%;
-  border-radius: 1.1vw;
+  border-radius: .9vw;
   display: flex; flex-direction: column; align-items: center; justify-content: center; gap: .65vw;
   color: rgba(255,255,255,.88);
 }
@@ -119,20 +118,20 @@ body.layout-list #topicons { display: none; }
 .app.focused { color: #fff; }
 body.labels-off .app .lbl { display: none; }
 body.labels-off .app .ico { width: 3.6vw; height: 3.6vw; }
-body.icons-white .app .ico img { filter: drop-shadow(0 1px 6px rgba(0,0,0,.25)); }
-body.icons-white .app .ico { width: 4.4vw; height: 4.4vw; }
-body.icons-white.labels-off .app .ico { width: 5.2vw; height: 5.2vw; }
-body.icons-white .app { gap: .5vw; }
-body.icons-white .litem .ico { width: 2.9vw; height: 2.9vw; }
-/* TV-Banner: breite Bilder statt Symbol, Name steht schon im Banner */
-body.icons-banner .app { gap: .4vw; }
-body.icons-banner .app .ico { width: 11.6vw; height: 6.5vw; }
-body.icons-banner .app .ico img { width: 100%; height: 100%; object-fit: cover; border-radius: .7vw; }
-body.icons-banner .app .lbl { display: none; }
-body.icons-banner .litem .ico { width: 4.1vw; height: 2.3vw; }
-body.icons-banner .litem .ico img { object-fit: cover; border-radius: .35vw; }
-body.icons-banner .tile .ico { width: 9vw; height: 5vw; }
-body.icons-banner .tile .ico img { object-fit: cover; border-radius: .6vw; }
+.app .ico.ico-mono img { filter: drop-shadow(0 1px 6px rgba(0,0,0,.25)); }
+.app .ico.ico-mono { width: 4.4vw; height: 4.4vw; }
+body.labels-off .app .ico.ico-mono { width: 5.2vw; height: 5.2vw; }
+.ico.ico-color img { border-radius: 22%; }
+.app .ico.ico-color { width: 3.6vw; height: 3.6vw; }
+.litem .ico.ico-mono { width: 2.9vw; height: 2.9vw; }
+/* TV-Banner: breite Bilder statt Symbol, der Name steht schon im Banner */
+.app .ico.ico-banner { width: 11vw; height: 6.2vw; }
+.app.has-banner { gap: .4vw; }
+.app.has-banner .lbl { display: none; }
+.ico.ico-banner img { width: 100%; height: 100%; object-fit: cover; border-radius: .6vw; }
+.litem .ico.ico-banner { width: 4.1vw; height: 2.3vw; }
+.litem .ico.ico-banner img { border-radius: .35vw; }
+.tile .ico.ico-banner { width: 9vw; height: 5vw; }
 .mono {
   width: 100%; height: 100%; border-radius: 22%; display: flex; align-items: center; justify-content: center;
   font-weight: 500; font-size: 1.5vw; background: rgba(255,255,255,.14);
@@ -234,7 +233,7 @@ body.artclock-small #artclock-date { font-size: 1vw; }
 .row .hint { font-size: .8vw; opacity: .55; margin-top: .15vw; }
 .row .lft { display: flex; align-items: center; gap: .8vw; }
 .row .lft .ic { width: 1.4vw; height: 1.4vw; opacity: .8; }
-.sheet .focused { background: rgba(255,255,255,.16); box-shadow: inset 0 0 0 1px rgba(255,255,255,.25); transform: none; }
+.sheet .focused { background: rgba(255,255,255,.14); box-shadow: inset 0 0 0 1px rgba(255,255,255,.22); transform: none; -webkit-backdrop-filter: none; backdrop-filter: none; }
 
 .grid { display: grid; gap: 1vw; }
 .thumb { border-radius: .9vw; padding: .35vw; }

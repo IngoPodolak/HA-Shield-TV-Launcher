@@ -181,8 +181,19 @@
     return apps.filter((a) => score(a) < 99).sort((a, b) => score(a) - score(b)).slice(0, 10)
       .concat(apps.filter((a) => score(a) === 99)).slice(0, 10);
   }
+  /** Symbol-Stil: pro App einstellbar (OK gedrückt halten), sonst der allgemeine aus den Einstellungen. */
+  function iconStyleOf(a) {
+    const o = (cfg.iconOverrides || {})[a.pkg];
+    return o || ({ white: 'mono', color: 'color', banner: 'banner' }[cfg.iconStyle] || 'mono');
+  }
+  const icoBox = (a) => h('div', { class: 'ico ico-' + iconStyleOf(a) }, [appIcon(a)]);
+  function setIconStyle(a, style) {
+    const o = Object.assign({}, cfg.iconOverrides || {});
+    if (style) o[a.pkg] = style; else delete o[a.pkg];
+    saveCfg({ iconOverrides: o }); renderApps(a.pkg);
+  }
   function appIcon(a, forceStyle) {
-    const style = forceStyle || ({ white: 'mono', color: 'color', banner: 'banner' }[cfg.iconStyle] || 'mono');
+    const style = forceStyle || iconStyleOf(a);
     const key = a.pkg + '|' + style;
     if (!(key in iconCache)) { try { iconCache[key] = Android.getIcon(a.pkg, style) || ''; } catch (e) { iconCache[key] = ''; } }
     const src = iconCache[key];
@@ -210,7 +221,18 @@
     menu(a.label, [
       { label: vertical ? 'Nach oben verschieben' : 'Nach links verschieben', act: () => moveFav(a.pkg, -1) },
       { label: vertical ? 'Nach unten verschieben' : 'Nach rechts verschieben', act: () => moveFav(a.pkg, 1) },
+      { label: 'Symbol ändern …', act: () => iconMenu(a) },
       { label: 'Aus der Leiste entfernen', act: () => toggleFav(a) }
+    ]);
+  }
+  function iconMenu(a) {
+    const cur = (cfg.iconOverrides || {})[a.pkg] || '';
+    const mark = (v) => (v === cur ? '  ✓' : '');
+    menu('Symbol für ' + a.label, [
+      { label: 'Weißes Logo' + mark('mono'), act: () => setIconStyle(a, 'mono') },
+      { label: 'Farbiges Symbol' + mark('color'), act: () => setIconStyle(a, 'color') },
+      { label: 'TV-Banner' + mark('banner'), act: () => setIconStyle(a, 'banner') },
+      { label: 'Wie alle anderen' + mark(''), act: () => setIconStyle(a, '') }
     ]);
   }
 
@@ -221,9 +243,10 @@
     favs.forEach((a) => {
       const act = (long) => (long ? appMenu(a) : launch(a));
       dock.appendChild(h('div', { class: 'app', 'data-f': true, 'data-pkg': a.pkg, _act: act },
-        [h('div', { class: 'ico' }, [appIcon(a)]), h('div', { class: 'lbl', text: a.label })]));
+        [icoBox(a), h('div', { class: 'lbl', text: a.label })]));
+      if (iconStyleOf(a) === 'banner') dock.lastChild.classList.add('has-banner');
       list.appendChild(h('div', { class: 'lrow' }, [h('div', { class: 'litem', 'data-f': true, 'data-pkg': a.pkg, _act: act },
-        [h('div', { class: 'ico' }, [appIcon(a)]), h('span', { text: a.label })])]));
+        [icoBox(a), h('span', { text: a.label })])]));
     });
     sizeDock();
     if (focusPkg) {
@@ -535,7 +558,7 @@
       const tile = h('div', { class: 'tile', 'data-f': true, _act: (long) => {
         if (long) { toggleFav(a); const st = tile.querySelector('.fav'); if (st) st.remove(); else tile.appendChild(icon('star', 'fav')); }
         else launch(a);
-      } }, [h('div', { class: 'ico' }, [appIcon(a)]), h('div', { text: a.label }), favs.has(a.pkg) ? icon('star', 'fav') : null]);
+      } }, [icoBox(a), h('div', { text: a.label }), favs.has(a.pkg) ? icon('star', 'fav') : null]);
       grid.appendChild(tile);
     });
     openModal(h('div', { class: 'sheet', style: 'width:84vw;height:84vh' }, [
