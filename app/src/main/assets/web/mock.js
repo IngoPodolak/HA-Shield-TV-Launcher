@@ -28,7 +28,7 @@
     testPopup: () => {},
     checkUpdate: () => JSON.stringify({ current: 1, latest: 1, available: false }),
     installUpdate: () => '',
-    openAndroidSettings: () => {}, openOverlaySettings: () => {},
+    openAndroidSettings: () => {}, openOverlaySettings: () => {}, openDashboard: () => { window.__dashOpened = (window.__dashOpened || 0) + 1; },
     httpGet: () => ''
   };
 
@@ -56,6 +56,7 @@
       return true;
     },
     cameraUrl: () => window.MOCK_CAM || '',
+    cmd: (m) => (m.type === 'lovelace/dashboards/list' ? [{ url_path: 'dashboard-tv', title: 'TV' }, { url_path: 'energie', title: 'Energie & PV' }] : []),
     list: () => Object.keys(states).map((id) => ({ entity_id: id, state: states[id].state, attributes: states[id].attributes }))
       .concat([{ entity_id: 'light.kueche', state: 'off', attributes: { friendly_name: 'Küche' } }, { entity_id: 'light.esstisch', state: 'on', attributes: { friendly_name: 'Esstisch' } }])
   };

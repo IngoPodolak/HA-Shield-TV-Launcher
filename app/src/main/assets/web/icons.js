@@ -22,6 +22,7 @@
     update: s('<path d="M20 11a8 8 0 1 0-2.3 5.7"/><path d="M20 4v7h-7"/>'),
     android: s('<rect x="5" y="9" width="14" height="10" rx="2"/><path d="M8 9a4 4 0 0 1 8 0"/><path d="M9 6L8 4M15 6l1-2"/>'),
     film: s('<rect x="3" y="4" width="18" height="16" rx="2"/><path d="M7 4v16M17 4v16M3 8h4M3 12h4M3 16h4M17 8h4M17 12h4M17 16h4"/>'),
+    dash: s('<path d="M3 11l9-7 9 7"/><path d="M5 10v10h14V10"/><rect x="8" y="13" width="3.5" height="4" rx=".6"/><rect x="12.5" y="13" width="3.5" height="2" rx=".6"/>'),
     image: s('<rect x="3" y="5" width="18" height="14" rx="2"/><path d="M3 15l5-5 4 4 3-3 6 6"/>')
   };
 })();

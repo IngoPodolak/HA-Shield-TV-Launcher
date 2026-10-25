@@ -10,6 +10,7 @@
     artAfter: 5, artClock: 'big',
     smart: 'on', camPreview: 'live', appliances: 'on',
     popupEnabled: true, popupPos: 'tr', popupSize: 'm', popupSeconds: 30, popupCam: 'live', camAspect: '4:3', ringPlayback: 'resume',
+    dashPath: 'lovelace', dashTitle: 'Übersicht', dashMode: 'view', dashSidebar: 'hide', dashTile: 'on',
     cinemaEnabled: true, cinemaLights: [], cinemaOffDelay: 3, cinemaOnDelay: 3,
     favorites: [],
     haHost: '192.168.0.5', haPort: 80,
@@ -73,6 +74,12 @@
     { key: 'cinemaEnabled', label: 'Kinolicht', opts: [[true, 'An'], [false, 'Aus']] },
     { key: 'cinemaOffDelay', label: 'Aus nach Wiedergabestart', opts: [[2, '2 Sek.'], [3, '3 Sek.'], [5, '5 Sek.'], [10, '10 Sek.']] },
     { key: 'cinemaOnDelay', label: 'Wieder an nach Pause/Stopp', opts: [[2, '2 Sek.'], [3, '3 Sek.'], [5, '5 Sek.'], [8, '8 Sek.'], [15, '15 Sek.']] },
+    { section: 'Home-Assistant-Dashboard' },
+    { act: 'dashpick', label: 'Dashboard', icon: 'dash', value: () => cfg.dashTitle || cfg.dashPath },
+    { key: 'dashMode', label: 'Fernbedienung', opts: [['view', 'Anschauen (Ansichten wechseln)'], ['control', 'Bedienen (Karten schalten)']] },
+    { key: 'dashSidebar', label: 'HA-Seitenleiste', opts: [['hide', 'Ausblenden'], ['show', 'Anzeigen']] },
+    { key: 'dashTile', label: 'Kachel im Dock', opts: [['on', 'Anzeigen'], ['off', 'Ausblenden']] },
+    { act: 'dashopen', label: 'Dashboard öffnen', icon: 'dash', value: () => '' },
     { section: 'Darstellung' },
     { key: 'layout', label: 'Layout', opts: [['dock', 'Dock'], ['list', 'Liste']] },
     { key: 'material', label: 'Material', opts: [['clear', 'Klar getönt'], ['frost', 'Milchglas'], ['dark', 'Dunkel getönt'], ['none', 'Ohne']] },
@@ -179,7 +186,19 @@
   let apps = [];
   const iconCache = {};
   const PREFERRED = ['stremio', 'netflix', 'disney', 'youtube', 'apple tv', 'prime video', 'plex', 'mediathek', 'zdf', 'spotify', 'kodi', 'waipu', 'joyn', 'magenta', 'dazn', 'sky', 'wow'];
-  function loadApps() { try { apps = JSON.parse(Android.getApps() || '[]'); } catch (e) { apps = []; } }
+  const DASH_APP = { pkg: '__dashboard__', label: 'Home Assistant', banner: false, virtual: true };
+  function loadApps() {
+    try { apps = JSON.parse(Android.getApps() || '[]'); } catch (e) { apps = []; }
+    if (cfg.dashTile !== 'off') apps.unshift(DASH_APP);
+  }
+  /** Kachel „Home Assistant“ in die Leiste aufnehmen bzw. entfernen. */
+  function syncDashTile() {
+    loadApps();
+    if (!cfg.favorites || !cfg.favorites.length) return;
+    const has = cfg.favorites.includes(DASH_APP.pkg);
+    if (cfg.dashTile !== 'off' && !has) saveCfg({ favorites: cfg.favorites.concat([DASH_APP.pkg]) });
+    if (cfg.dashTile === 'off' && has) saveCfg({ favorites: cfg.favorites.filter((p) => p !== DASH_APP.pkg) });
+  }
   function favApps() {
     const byPkg = {}; apps.forEach((a) => (byPkg[a.pkg] = a));
     if (cfg.favorites && cfg.favorites.length) return cfg.favorites.map((p) => byPkg[p]).filter(Boolean);
@@ -199,6 +218,13 @@
     saveCfg({ iconOverrides: o }); renderApps(a.pkg);
   }
   function appIcon(a, forceStyle) {
+    if (a.pkg === DASH_APP.pkg) {
+      const style = forceStyle || iconStyleOf(a);
+      const svg = ICON.dash.replace('<svg ', '<svg xmlns="http://www.w3.org/2000/svg" width="96" height="96" ').replace(/currentColor/g, '#ffffff').replace('stroke-width="1.7"', 'stroke-width="1.5"');
+      const img = h('img', { src: 'data:image/svg+xml;utf8,' + encodeURIComponent(svg) });
+      if (style === 'color' || style === 'banner') img.style.cssText = 'background:#1f6fb5;border-radius:22%;padding:12%';
+      return img;
+    }
     if ((forceStyle || iconStyleOf(a)) === 'custom') {
       const u = (cfg.customLogos || {})[a.pkg];
       if (u) return h('img', { src: u });
@@ -211,6 +237,7 @@
     return h('div', { class: 'mono', text: a.label.replace(/[^A-Za-z0-9ÄÖÜäöü]/g, '').slice(0, 1).toUpperCase() });
   }
   function launch(a) {
+    if (a.pkg === DASH_APP.pkg) { Android.openDashboard(); return; }
     if (!Android.launch(a.pkg)) toast(a.label + ' lässt sich nicht starten');
   }
   function ensureFavs() { if (!cfg.favorites || !cfg.favorites.length) saveCfg({ favorites: favApps().map((a) => a.pkg) }); }
@@ -517,6 +544,7 @@
   }
   function onCfgChanged(key) {
     if (key === 'haHost' || key === 'haPort') applyHaAddress();
+    if (key === 'dashTile') { syncDashTile(); renderApps(); }
     if (key === 'iconStyle') for (const k in iconCache) delete iconCache[k];
     applyCfg();
     if (key === 'layout') { dockOffset = 0; listOffset = 0; renderApps(); }
@@ -529,6 +557,8 @@
     if (a === 'login') { toast('Anmeldeseite von Home Assistant wird geöffnet …'); Android.login(HA.url || cfg.haUrl); }
     else if (a === 'entity') openEntityPicker(s.entity);
     else if (a === 'cinemaLights') openCinemaPicker();
+    else if (a === 'dashpick') openDashPicker();
+    else if (a === 'dashopen') Android.openDashboard();
     else if (a === 'bgpicker') openBgPicker();
     else if (a === 'testpopup') {
       if (!Android.canOverlay()) toast('Popup-Berechtigung fehlt – wird bei der Installation per Befehl gesetzt');
@@ -536,6 +566,27 @@
     } else if (a === 'setup') openSetup();
     else if (a === 'update') checkUpdate();
     else if (a === 'android') Android.openAndroidSettings();
+  }
+
+  /** Auswahl des Dashboards: Liste kommt direkt aus Home Assistant. */
+  function openDashPicker() {
+    const track = h('div', { class: 'scrolltrack' });
+    const sub = h('div', { class: 'sub', text: 'Lade Dashboards aus Home Assistant …' });
+    openModal(h('div', { class: 'sheet', style: 'width:52vw;height:80vh' }, [h('h2', {}, [icon('dash'), 'Dashboard wählen']), sub, h('div', { class: 'scroll' }, [track])]));
+    const add = (path, title, hint) => {
+      const cur = (cfg.dashPath || 'lovelace') === path;
+      const row = h('div', { class: 'row' + (cur ? ' current' : ''), 'data-f': true, _act: () => {
+        saveCfg({ dashPath: path, dashTitle: title }); closeModal(); refreshModals(); toast('Dashboard: ' + title);
+      } }, [h('div', {}, [h('div', { text: title }), h('div', { class: 'hint', text: hint || '/' + path })]), h('span', { class: 'val' }, cur ? [icon('check', 'arr')] : [])]);
+      track.appendChild(row);
+    };
+    HA.cmd({ type: 'lovelace/dashboards/list' }).then((list) => {
+      sub.textContent = 'OK wählt das Dashboard für die zweite Seite.';
+      add('lovelace', 'Übersicht', 'Standard-Dashboard');
+      (list || []).forEach((d) => add(d.url_path, d.title || d.url_path));
+      add('energy', 'Energie', 'Energie-Dashboard von HA');
+      setFocus(track.querySelector('.current') || track.querySelector('[data-f]'));
+    }).catch((err) => { sub.textContent = err.message + ' – bitte zuerst anmelden.'; });
   }
 
   function cinemaSummary() {
@@ -1037,15 +1088,15 @@
 
   // ------------------------------------------------------------------ Start
   function init() {
-    document.querySelectorAll('#topicons .iconbtn').forEach((b) => (b.innerHTML = ICON[b.dataset.act === 'allapps' ? 'grid' : b.dataset.act === 'art' ? 'art' : 'gear']));
+    document.querySelectorAll('#topicons .iconbtn').forEach((b) => (b.innerHTML = ICON[{ allapps: 'grid', art: 'art', dash: 'dash' }[b.dataset.act] || 'gear']));
     document.querySelectorAll('[data-act]').forEach((b) => {
       const a = b.dataset.act;
-      b._act = () => (a === 'art' ? enterArt() : a === 'allapps' ? openAllApps() : openSettings());
+      b._act = () => (a === 'dash' ? Android.openDashboard() : a === 'art' ? enterArt() : a === 'allapps' ? openAllApps() : openSettings());
     });
     loadCfg(); applyCfg();
     if (needAddressMigration) saveCfg({ haHost: cfg.haHost, haPort: cfg.haPort, haUrl: buildUrl(cfg.haHost, cfg.haPort),
       haUrlAlt: HOSTS.filter((x) => x !== cfg.haHost).map((x) => buildUrl(x, cfg.haPort)) });
-    loadApps(); renderApps();
+    syncDashTile(); renderApps();
     loadBackgroundLists(); startBg(true);
     connectHa(); renderSmart(true); renderStatus();
     setInterval(tickClock, 5000);

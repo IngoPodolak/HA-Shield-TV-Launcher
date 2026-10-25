@@ -70,6 +70,18 @@
   };
 
   /** Alle Entitäten (für die Geräteauswahl im Menü). */
+  /** Beliebigen WebSocket-Befehl senden, Antwort als Promise. */
+  HA.cmd = function (msg) {
+    if (window.MOCK_HA) return Promise.resolve(window.MOCK_HA.cmd ? window.MOCK_HA.cmd(msg) : []);
+    return new Promise((resolve, reject) => {
+      if (!HA.ws || !HA.connected) { reject(new Error('Home Assistant ist nicht verbunden')); return; }
+      const id = ++HA.msgId;
+      HA.pending[id] = (m) => (m.success ? resolve(m.result) : reject(new Error((m.error && m.error.message) || 'Fehler')));
+      HA.ws.send(JSON.stringify(Object.assign({ id }, msg)));
+      setTimeout(() => { if (HA.pending[id]) { delete HA.pending[id]; reject(new Error('Keine Antwort')); } }, 15000);
+    });
+  };
+
   HA.listStates = function () {
     if (window.MOCK_HA) return Promise.resolve(window.MOCK_HA.list());
     return new Promise((resolve, reject) => {
