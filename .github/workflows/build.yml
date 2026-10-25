@@ -33,7 +33,8 @@ jobs:
         run: |
           set -o pipefail
           if ! gradle :app:assembleRelease --console=plain 2>&1 | tee build.log; then
-            { grep -E "^e: |^ERROR|error:" build.log; grep -A6 "What went wrong" build.log; } | grep -v "^> Task" | head -40 | while IFS= read -r l; do echo "::error::$l"; done
+            msg=$( { grep -E "^e: " build.log || true; grep -A8 "What went wrong" build.log || true; } | head -30 | sed ':a;N;$!ba;s/\n/%0A/g' )
+            echo "::error::${msg:-Unbekannter Fehler}"
             exit 1
           fi
 
