@@ -57,4 +57,5 @@ dependencies {
     implementation("androidx.core:core-ktx:1.13.1")
     implementation("com.squareup.okhttp3:okhttp:4.12.0")
     implementation("com.google.zxing:core:3.5.3")
+    implementation("dev.mobile:dadb:1.2.7")
 }

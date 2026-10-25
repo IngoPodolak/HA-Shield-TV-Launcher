@@ -30,7 +30,12 @@ jobs:
         run: bash tools/fetch_backgrounds.sh
 
       - name: APK bauen
-        run: gradle :app:assembleRelease --stacktrace
+        run: |
+          set -o pipefail
+          if ! gradle :app:assembleRelease --console=plain 2>&1 | tee build.log; then
+            grep -E "^e: |error:|What went wrong|Could not|> " build.log | head -40 | while IFS= read -r l; do echo "::error::$l"; done
+            exit 1
+          fi
 
       - name: APK umbenennen
         run: cp app/build/outputs/apk/release/app-release.apk tv-home.apk

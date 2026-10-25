@@ -184,6 +184,34 @@ object SetupServer {
                         val f = File(Backgrounds.customDir(app), File(r.path.removePrefix("/bg/")).name)
                         if (!f.exists()) send(out, 404, "text/plain", ByteArray(0)) else send(out, 200, "image/jpeg", f.readBytes())
                     }
+                    r.path == "/api/key" && r.method == "POST" -> {
+                        val ok = Remote.key(app, r.query["k"] ?: "")
+                        json(out, if (ok) 200 else 400, JSONObject().put("ok", ok).put("error", Remote.lastError).toString())
+                    }
+                    r.path == "/api/text" && r.method == "POST" -> {
+                        val ok = Remote.text(app, String(r.body, Charsets.UTF_8))
+                        json(out, 200, JSONObject().put("ok", ok).toString())
+                    }
+                    r.path == "/api/remote-test" && r.method == "POST" -> {
+                        val ok = Remote.test(app)
+                        json(out, 200, JSONObject().put("ok", ok).put("error", Remote.lastError).toString())
+                    }
+                    r.path == "/api/backgrounds/builtin" -> {
+                        val arr = JSONArray(Backgrounds.builtinJson(app))
+                        val outArr = JSONArray()
+                        for (i in 0 until arr.length()) {
+                            val o = arr.getJSONObject(i)
+                            outArr.put(JSONObject().put("id", o.optString("id")).put("name", o.optString("name")))
+                        }
+                        json(out, 200, outArr.toString())
+                    }
+                    r.path == "/api/bgthumb" -> {
+                        val id = (r.query["id"] ?: "").filter { it.isLetterOrDigit() }
+                        val bytes = try { app.assets.open("backgrounds/thumbs/$id.jpg").readBytes() } catch (e: Exception) {
+                            try { app.assets.open("backgrounds/$id.jpg").readBytes() } catch (e2: Exception) { null }
+                        }
+                        if (bytes == null) send(out, 404, "text/plain", ByteArray(0)) else send(out, 200, "image/jpeg", bytes)
+                    }
                     r.path == "/api/test-popup" && r.method == "POST" -> {
                         HaService.ringNow(app)
                         json(out, 200, JSONObject().put("ok", true).put("overlay", Overlay.canShow(app)).toString())

@@ -1073,10 +1073,14 @@
 
   // ------------------------------------------------------------------ Aufrufe von Android
   window.tvConfigChanged = () => {
-    const oldFav = JSON.stringify([cfg.favorites, cfg.customLogos, cfg.iconOverrides]), oldBg = cfg.bgChanged;
+    const oldFav = JSON.stringify([cfg.favorites, cfg.customLogos, cfg.iconOverrides]), oldBg = JSON.stringify([cfg.bgChanged, cfg.bgMode, cfg.bgId, cfg.bgInterval]);
+    const oldLayout = JSON.stringify([cfg.layout, cfg.iconStyle, cfg.labels, cfg.textSize, cfg.dashTile]);
     loadCfg(); applyCfg(); connectHa();
     if (JSON.stringify([cfg.favorites, cfg.customLogos, cfg.iconOverrides]) !== oldFav) { for (const k in iconCache) delete iconCache[k]; renderApps(); }
-    if (cfg.bgChanged !== oldBg) { loadBackgroundLists(); startBg(); }
+    if (JSON.stringify([cfg.bgChanged, cfg.bgMode, cfg.bgId, cfg.bgInterval]) !== oldBg) { bgIndex = 0; loadBackgroundLists(); startBg(true); }
+    if (JSON.stringify([cfg.layout, cfg.iconStyle, cfg.labels, cfg.textSize, cfg.dashTile]) !== oldLayout) {
+      for (const k in iconCache) delete iconCache[k]; dockOffset = 0; listOffset = 0; syncDashTile(); renderApps(); setFocus(defaultFocus());
+    }
     renderSmart(true); renderStatus(); refreshModals();
   };
   window.tvPause = () => { paused = true; updateCam(); };
