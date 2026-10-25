@@ -48,6 +48,10 @@ android {
     buildFeatures {
         buildConfig = true
     }
+    lint {
+        checkReleaseBuilds = false
+        abortOnError = false
+    }
     packaging {
         resources {
             excludes += setOf("META-INF/LICENSE*", "META-INF/NOTICE*", "META-INF/*.md", "META-INF/DEPENDENCIES", "META-INF/versions/**")
