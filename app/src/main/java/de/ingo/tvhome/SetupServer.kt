@@ -103,6 +103,9 @@ object SetupServer {
                 val r = parse(inp) ?: return
                 val pinOk = (r.query["pin"] ?: r.headers["x-pin"]) == Config.pin(app)
 
+                if (r.path == "/setup2.js") {
+                    return send(out, 200, "application/javascript; charset=utf-8", app.assets.open("web/setup2.js").readBytes())
+                }
                 if (r.path == "/" || r.path == "/setup") {
                     val html = app.assets.open("web/setup.html").readBytes()
                     return send(out, 200, "text/html; charset=utf-8", html)
