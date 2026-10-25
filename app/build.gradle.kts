@@ -48,6 +48,11 @@ android {
     buildFeatures {
         buildConfig = true
     }
+    packaging {
+        resources {
+            excludes += setOf("META-INF/LICENSE*", "META-INF/NOTICE*", "META-INF/*.md", "META-INF/DEPENDENCIES", "META-INF/versions/**")
+        }
+    }
     androidResources {
         noCompress += listOf("jpg")
     }
@@ -57,5 +62,11 @@ dependencies {
     implementation("androidx.core:core-ktx:1.13.1")
     implementation("com.squareup.okhttp3:okhttp:4.12.0")
     implementation("com.google.zxing:core:3.5.3")
-    implementation("dev.mobile:dadb:1.2.7")
+    implementation("dev.mobile:dadb:1.2.7") {
+        exclude(group = "org.junit.platform")
+        exclude(group = "org.junit.jupiter")
+        exclude(group = "junit")
+        exclude(group = "org.opentest4j")
+        exclude(group = "org.apiguardian")
+    }
 }
