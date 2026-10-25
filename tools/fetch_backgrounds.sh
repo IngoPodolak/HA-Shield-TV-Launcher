@@ -7,7 +7,7 @@ CONV=$(command -v magick || command -v convert)
 echo "Bildwerkzeug: $CONV"
 LIST="["
 n=0
-while read -r id; do
+while IFS="|" read -r id title; do
   [[ -z "$id" || "$id" == \#* ]] && continue
   [[ $n -ge 20 ]] && break
   num=$(printf "%02d" $((n + 1)))
@@ -16,7 +16,8 @@ while read -r id; do
      && [[ $(stat -c%s "$DEST/$num.jpg") -gt 60000 ]]; then
     $CONV "$DEST/$num.jpg" -resize 480x270^ -gravity center -extent 480x270 -quality 75 "$DEST/thumbs/$num.jpg"
     [[ $n -gt 0 ]] && LIST+=","
-    LIST+="{\"id\":\"$num\",\"name\":\"Landschaft $((n + 1))\",\"src\":\"$id\"}"
+    [[ -z "$title" ]] && title="Landschaft $((n + 1))"
+    LIST+="{\"id\":\"$num\",\"name\":\"$title\",\"src\":\"$id\"}"
     n=$((n + 1))
     echo "OK   $num  $id"
   else

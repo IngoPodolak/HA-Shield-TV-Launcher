@@ -388,7 +388,7 @@
       const tr = sc.firstElementChild;
       let off = tr._off || 0;
       const top = el.offsetTop, bottom = top + el.offsetHeight, view = sc.clientHeight;
-      if (bottom - off > view - 10) off = bottom - view + 10;
+      if (bottom - off > view - 28) off = bottom - view + 28;
       if (top - off < 10) off = Math.max(0, top - 10);
       tr._off = off; tr.style.transform = 'translateY(' + -off + 'px)';
     }
@@ -518,11 +518,15 @@
     SETTINGS.forEach((s) => {
       if (s.section) { track.appendChild(h('div', { class: 'section', text: s.section })); return; }
       const val = h('span', { class: 'txt' });
+      const thumb = s.act === 'bgpicker' ? h('span', { class: 'thumbv' }) : null;
       const row = h('div', { class: 'row', 'data-f': true }, [
         h('div', { class: 'lft' }, [s.icon ? icon(s.icon) : null, h('span', { text: s.label })]),
-        h('div', { class: 'val' }, s.opts ? [icon('left', 'arr'), val, icon('right', 'arr')] : [val])
+        h('div', { class: 'val' }, s.opts ? [icon('left', 'arr'), val, icon('right', 'arr')] : [thumb, val])
       ]);
-      const upd = () => { val.textContent = s.opts ? optLabel(s) : (s.value ? s.value() : ''); };
+      const upd = () => {
+        val.textContent = s.opts ? optLabel(s) : (s.value ? s.value() : '');
+        if (thumb) { const b = currentBg(); thumb.style.backgroundImage = b ? 'url("' + (b.thumb || b.url) + '")' : GRADIENTS[0]; }
+      };
       if (s.opts) {
         const step = (d) => {
           let i = s.opts.findIndex((x) => String(x[0]) === String(cfg[s.key]));
@@ -539,7 +543,12 @@
       row._upd = upd; upd(); rows.push(row);
       track.appendChild(row);
     });
-    const sheet = h('div', { class: 'sheet' }, [h('h2', {}, [icon('gear'), 'Einstellungen']), h('div', { class: 'scroll' }, [track])]);
+    const sheet = h('div', { class: 'sheet settings' }, [
+      h('div', { class: 'kicker', text: 'Einstellungen' }),
+      h('h2', { class: 'serif', text: 'Mach es zu deinem' }),
+      h('div', { class: 'scroll' }, [track]),
+      h('div', { class: 'foot', text: '◀ ▶ ändert eine Einstellung · Änderungen werden sofort gespeichert' })
+    ]);
     openModal(sheet, { side: true, refresh: () => rows.forEach((r) => r._upd()) });
   }
   function onCfgChanged(key) {
