@@ -30,7 +30,7 @@
   .mbox { display: none; flex-direction: column; }
   body.msg .mbox { display: flex; }
   body.msg .head, body.msg .cam { display: none; }
-  .mimg { width: 100%; display: block; max-height: 70vh; object-fit: cover; background: #000; }
+  .mimg { width: 100%; display: block; object-fit: cover; background: #000; }
   .mtext { padding: 16px 20px 20px; }
   .mtitle { display: flex; align-items: center; gap: 10px; font-size: 19px; font-weight: 600; margin-bottom: 6px; }
   .mtitle svg { width: 22px; height: 22px; flex: none; opacity: .85; }
@@ -65,9 +65,15 @@
     document.getElementById('mtitle').textContent = t || 'Nachricht';
     document.getElementById('mbody').textContent = m;
     if (!m) document.getElementById('mbody').style.display = 'none';
-    const fit = () => { try { PopupHost.resize(Math.ceil(document.querySelector('.box').getBoundingClientRect().height) + 2); } catch (e) {} };
-    if (im) { const el = document.getElementById('mimg'); el.hidden = false; el.onload = fit; el.onerror = () => { el.hidden = true; fit(); }; el.src = im; }
-    setTimeout(fit, 30);
+    const box = document.querySelector('.box');
+    // Bildhöhe fest am Bildschirm begrenzen (nicht an der Fensterhöhe, die sich beim Anpassen ändert)
+    const el = document.getElementById('mimg');
+    el.style.maxHeight = Math.round((screen.height || 1080) * 0.55) + 'px';
+    let last = 0;
+    const fit = () => { const h = Math.ceil(box.offsetHeight) + 2; if (h !== last) { last = h; try { PopupHost.resize(h); } catch (e) {} } };
+    if (im) { el.hidden = false; el.onload = fit; el.onerror = () => { el.hidden = true; fit(); }; el.src = im; }
+    try { new ResizeObserver(fit).observe(box); } catch (e) {}
+    setTimeout(fit, 30); setTimeout(fit, 400); setTimeout(fit, 1200);
     document.getElementById('mbar').animate([{ transform: 'scaleX(1)' }, { transform: 'scaleX(0)' }], { duration: secsM * 1000, fill: 'forwards', easing: 'linear' });
   } else {
   document.getElementById('title').textContent = q.get('t') || 'Es klingelt';
