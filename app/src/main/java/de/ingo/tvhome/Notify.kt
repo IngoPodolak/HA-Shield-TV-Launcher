@@ -106,7 +106,8 @@ object Notify {
                     val title = parts["title"]?.let { String(it.second, Charsets.UTF_8) } ?: ""
                     val msg = parts["msg"]?.let { String(it.second, Charsets.UTF_8) } ?: ""
                     val dur = parts["duration"]?.let { String(it.second).trim().toIntOrNull() } ?: 0
-                    val img = parts["filename"]?.second?.takeIf { it.size > 100 }
+                    // "filename" ist das kleine Symbol (immer dabei), "filename2" das eigentliche Bild
+                    val img = parts["filename2"]?.second?.takeIf { it.size > 100 }
                     if (msg.isNotBlank() || title.isNotBlank() || img != null) show(ctx, title, msg, img, dur)
                 }
                 val resp = "OK".toByteArray()
