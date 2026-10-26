@@ -90,6 +90,24 @@ object Remote {
         return true
     }
 
+    /**
+     * Update ohne Rückfrage installieren: APK auf den Shield kopieren und per Paketmanager installieren.
+     * Der Befehl läuft im Hintergrund weiter, auch wenn TV Home dabei beendet wird, und startet die App danach neu.
+     */
+    fun installApk(ctx: Context, apk: File): Boolean {
+        return try {
+            val d = conn(ctx)
+            d.push(apk, "/data/local/tmp/tvhome-update.apk")
+            d.shell("nohup sh -c 'sleep 1; pm install -r /data/local/tmp/tvhome-update.apk && am start -n ${ctx.packageName}/.MainActivity; rm -f /data/local/tmp/tvhome-update.apk' >/dev/null 2>&1 &")
+            true
+        } catch (e: Throwable) {
+            try { dadb?.close() } catch (_: Throwable) {}
+            dadb = null
+            lastError = "Keine Debugging-Verbindung"
+            false
+        }
+    }
+
     /** Verbindung prüfen (löst beim ersten Mal die Abfrage am Fernseher aus). */
     fun test(ctx: Context): Boolean = shell(ctx, "echo ok")
 }

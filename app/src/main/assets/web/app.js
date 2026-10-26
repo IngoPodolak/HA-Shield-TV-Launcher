@@ -710,7 +710,7 @@
       if (r.error) { toast(r.error); return; }
       if (!r.available) { toast('Du hast die neueste Version (' + Android.version() + ')'); return; }
       menu('Neue Version ' + r.latest + ' verfügbar', [
-        { label: 'Jetzt installieren', act: () => { toast('Lade herunter …'); setTimeout(() => { const err = Android.installUpdate(r.url); if (err) toast(err); }, 50); } },
+        { label: 'Jetzt installieren', act: () => { toast('Lade herunter und installiere … TV Home startet danach neu'); setTimeout(() => { const err = Android.installUpdate(r.url); if (err) toast(err); }, 50); } },
         { label: 'Später', act: () => {} }
       ]);
     }, 60);

@@ -187,6 +187,11 @@ object SetupServer {
                         val f = File(Backgrounds.customDir(app), File(r.path.removePrefix("/bg/")).name)
                         if (!f.exists()) send(out, 404, "text/plain", ByteArray(0)) else send(out, 200, "image/jpeg", f.readBytes())
                     }
+                    r.path == "/api/update/check" -> json(out, 200, Updater.check())
+                    r.path == "/api/update/install" && r.method == "POST" -> {
+                        val m = Updater.updateNow(app)
+                        json(out, 200, JSONObject().put("ok", m.isEmpty()).put("message", m).toString())
+                    }
                     r.path == "/api/notify" && r.method == "POST" -> {
                         val title = r.query["title"] ?: ""
                         val msg = r.query["msg"] ?: r.query["message"] ?: ""

@@ -32,7 +32,7 @@ class Bridge(private val activity: MainActivity) {
     @JavascriptInterface fun testMessage() = Notify.show(ctx, "Test-Nachricht", "So sehen Nachrichten vom Handy oder aus Home Assistant aus.", null, 0)
 
     @JavascriptInterface fun checkUpdate(): String = Updater.check()
-    @JavascriptInterface fun installUpdate(url: String): String = Updater.downloadAndInstall(ctx, url)
+    @JavascriptInterface fun installUpdate(url: String): String = Updater.updateNow(ctx)
 
     @JavascriptInterface fun openAndroidSettings() = start(Intent(Settings.ACTION_SETTINGS))
     @JavascriptInterface fun openOverlaySettings() =

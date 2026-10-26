@@ -39,6 +39,31 @@ object Updater {
         }
     }
 
+    /** Lädt die APK herunter. */
+    private fun download(ctx: Context, url: String): File? {
+        val dir = File(ctx.cacheDir, "updates").apply { mkdirs() }
+        val f = File(dir, "tvhome.apk")
+        TvHomeApp.http.newCall(Request.Builder().url(url).build()).execute().use { r ->
+            if (!r.isSuccessful) return null
+            f.outputStream().use { o -> r.body!!.byteStream().copyTo(o) }
+        }
+        return f
+    }
+
+    /**
+     * Neueste Version suchen und installieren. Bevorzugt ohne Rückfrage (über die Debugging-Verbindung),
+     * sonst mit dem normalen Android-Installationsdialog. Gibt eine Meldung zurück ("" = läuft).
+     */
+    fun updateNow(ctx: Context): String {
+        val info = JSONObject(check())
+        if (info.has("error")) return info.getString("error")
+        if (!info.optBoolean("available")) return "Du hast schon die neueste Version (" + BuildConfig.VERSION_NAME + ")."
+        val url = info.optString("url")
+        val apk = try { download(ctx, url) } catch (e: Exception) { null } ?: return "Download fehlgeschlagen"
+        if (Remote.installApk(ctx, apk)) return ""
+        return downloadAndInstall(ctx, url)
+    }
+
     /** Lädt die APK und öffnet den Android-Installationsdialog. Gibt eine Fehlermeldung oder "" zurück. */
     fun downloadAndInstall(ctx: Context, url: String): String {
         if (Build.VERSION.SDK_INT >= 26 && !ctx.packageManager.canRequestPackageInstalls()) {
