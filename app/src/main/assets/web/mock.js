@@ -25,7 +25,7 @@
     setupUrl: () => 'http://192.168.1.50:8765/?pin=4821',
     qr: () => '',
     canOverlay: () => false,
-    testPopup: () => {}, testMessage: () => {},
+    testPopup: () => {}, testMessage: () => {}, nfaReady: () => true,
     checkUpdate: () => JSON.stringify({ current: 1, latest: 1, available: false }),
     installUpdate: () => '',
     openAndroidSettings: () => {}, openOverlaySettings: () => {}, openDashboard: () => { window.__dashOpened = (window.__dashOpened || 0) + 1; },

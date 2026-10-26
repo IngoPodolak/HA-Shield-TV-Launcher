@@ -109,6 +109,7 @@
     { key: 'msgSeconds', label: 'Anzeigedauer', opts: [[8, '8 Sek.'], [15, '15 Sek.'], [30, '30 Sek.'], [60, '1 Min.'], [120, '2 Min.']] },
     { key: 'msgPos', label: 'Position', opts: [['tr', 'Oben rechts'], ['tc', 'Oben Mitte'], ['tl', 'Oben links'], ['c', 'Mitte'], ['br', 'Unten rechts'], ['bl', 'Unten links']] },
     { key: 'msgSize', label: 'Größe', opts: [['s', 'Klein'], ['m', 'Mittel'], ['l', 'Groß']] },
+    { act: 'none', label: 'Empfang aus Home Assistant', value: () => (Android.nfaReady() ? 'Bereit' : 'Belegt – andere Benachrichtigungs-App entfernen') },
     { act: 'testmsg', label: 'Test-Nachricht senden', icon: 'bell', value: () => '' },
     { section: 'Klingel-Popup' },
     { key: 'popupEnabled', label: 'Popup beim Klingeln', opts: [[true, 'An'], [false, 'Aus']] },

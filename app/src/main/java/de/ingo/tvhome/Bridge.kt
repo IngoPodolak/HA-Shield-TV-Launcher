@@ -29,6 +29,7 @@ class Bridge(private val activity: MainActivity) {
 
     @JavascriptInterface fun canOverlay(): Boolean = Overlay.canShow(ctx)
     @JavascriptInterface fun testPopup() = HaService.ringNow(ctx)
+    @JavascriptInterface fun nfaReady(): Boolean = Notify.nfaReady
     @JavascriptInterface fun testMessage() = Notify.show(ctx, "Test-Nachricht", "So sehen Nachrichten vom Handy oder aus Home Assistant aus.", null, 0)
 
     @JavascriptInterface fun checkUpdate(): String = Updater.check()

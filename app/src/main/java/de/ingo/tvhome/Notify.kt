@@ -19,6 +19,8 @@ import java.net.Socket
 object Notify {
     const val NFA_PORT = 7676
     @Volatile private var started = false
+    /** true = TV Home empfängt Nachrichten aus Home Assistant; false = Anschluss von einer anderen App belegt. */
+    @Volatile var nfaReady = false
 
     /** Zeigt eine Nachricht. [image] darf null sein. [seconds] <= 0 = Standard aus den Einstellungen. */
     fun show(ctx: Context, title: String, message: String, image: ByteArray?, seconds: Int) {
@@ -60,15 +62,24 @@ object Notify {
         if (started) return
         started = true
         val app = ctx.applicationContext
+        // Ist der Anschluss belegt (z. B. durch die App „Notifications for Android TV“), alle 20 s neu versuchen.
         Thread {
-            try {
-                ServerSocket(NFA_PORT).use { server ->
-                    while (true) {
-                        val s = server.accept()
-                        Thread { handle(app, s) }.start()
+            while (true) {
+                try {
+                    ServerSocket().use { server ->
+                        server.reuseAddress = true
+                        server.bind(java.net.InetSocketAddress(NFA_PORT))
+                        nfaReady = true
+                        while (true) {
+                            val s = server.accept()
+                            Thread { handle(app, s) }.start()
+                        }
                     }
+                } catch (e: Exception) {
+                    nfaReady = false
                 }
-            } catch (e: Exception) { started = false }
+                try { Thread.sleep(20_000) } catch (_: InterruptedException) {}
+            }
         }.apply { isDaemon = true }.start()
     }
 
