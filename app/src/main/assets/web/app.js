@@ -10,7 +10,8 @@
     artAfter: 5, artClock: 'big',
     smart: 'on', camPreview: 'live', appliances: 'on',
     popupEnabled: true, popupPos: 'tr', popupSize: 'm', popupSeconds: 30, popupCam: 'live', camAspect: '4:3', ringPlayback: 'resume',
-    dashPath: 'lovelace', dashTitle: 'Übersicht', dashMode: 'view', dashSidebar: 'hide', dashTile: 'on',
+    dashPath: 'lovelace', dashTitle: 'Übersicht', dashMode: 'view', dashZoom: 75,
+    msgEnabled: true, msgSeconds: 15, msgPos: 'tr', msgSize: 'm', dashSidebar: 'hide', dashTile: 'on',
     cinemaEnabled: true, cinemaLights: [], cinemaOffDelay: 3, cinemaOnDelay: 3,
     favorites: [],
     haHost: '192.168.0.5', haPort: 80,
@@ -76,6 +77,7 @@
     { key: 'cinemaOnDelay', label: 'Wieder an nach Pause/Stopp', opts: [[2, '2 Sek.'], [3, '3 Sek.'], [5, '5 Sek.'], [8, '8 Sek.'], [15, '15 Sek.']] },
     { section: 'Home-Assistant-Dashboard' },
     { act: 'dashpick', label: 'Dashboard', icon: 'dash', value: () => cfg.dashTitle || cfg.dashPath },
+    { key: 'dashZoom', label: 'Zoom', opts: [50, 60, 65, 70, 75, 80, 85, 90, 100, 110, 125, 150].map((z) => [z, z + ' %']) },
     { key: 'dashMode', label: 'Fernbedienung', opts: [['view', 'Anschauen (Ansichten wechseln)'], ['control', 'Bedienen (Karten schalten)']] },
     { key: 'dashSidebar', label: 'HA-Seitenleiste', opts: [['hide', 'Ausblenden'], ['show', 'Anzeigen']] },
     { key: 'dashTile', label: 'Kachel im Dock', opts: [['on', 'Anzeigen'], ['off', 'Ausblenden']] },
@@ -102,6 +104,12 @@
     { key: 'smart', label: 'Smart-Home-Leiste', opts: [['on', 'Anzeigen'], ['off', 'Ausblenden']] },
     { key: 'camPreview', label: 'Kamera-Vorschau', opts: [['live', 'Live'], ['still', 'Standbild (10 s)'], ['off', 'Aus']] },
     { key: 'appliances', label: 'Restlaufzeit Geräte', opts: [['on', 'Wenn aktiv'], ['off', 'Aus']] },
+    { section: 'Nachrichten' },
+    { key: 'msgEnabled', label: 'Nachrichten anzeigen', opts: [[true, 'An'], [false, 'Aus']] },
+    { key: 'msgSeconds', label: 'Anzeigedauer', opts: [[8, '8 Sek.'], [15, '15 Sek.'], [30, '30 Sek.'], [60, '1 Min.'], [120, '2 Min.']] },
+    { key: 'msgPos', label: 'Position', opts: [['tr', 'Oben rechts'], ['tc', 'Oben Mitte'], ['tl', 'Oben links'], ['c', 'Mitte'], ['br', 'Unten rechts'], ['bl', 'Unten links']] },
+    { key: 'msgSize', label: 'Größe', opts: [['s', 'Klein'], ['m', 'Mittel'], ['l', 'Groß']] },
+    { act: 'testmsg', label: 'Test-Nachricht senden', icon: 'bell', value: () => '' },
     { section: 'Klingel-Popup' },
     { key: 'popupEnabled', label: 'Popup beim Klingeln', opts: [[true, 'An'], [false, 'Aus']] },
     { key: 'ringPlayback', label: 'Wiedergabe beim Klingeln', opts: [['resume', 'Pause, beim Wegdrücken weiter'], ['pause', 'Nur pausieren'], ['off', 'Weiterlaufen lassen']] },
@@ -563,6 +571,7 @@
   }
   function settingsAction(a, s) {
     if (a === 'none') return;
+    if (a === 'testmsg') { Android.testMessage(); return; }
     if (a === 'login') { toast('Anmeldeseite von Home Assistant wird geöffnet …'); Android.login(HA.url || cfg.haUrl); }
     else if (a === 'entity') openEntityPicker(s.entity);
     else if (a === 'cinemaLights') openCinemaPicker();

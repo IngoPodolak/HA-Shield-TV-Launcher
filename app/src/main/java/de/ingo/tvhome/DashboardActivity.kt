@@ -52,6 +52,7 @@ class DashboardActivity : Activity() {
                     "if(localStorage.getItem('dockedSidebar')==='\"always_hidden\"'){localStorage.setItem('dockedSidebar','\"docked\"');location.reload();}"
                 view.evaluateJavascript(sidebarJs, null)
                 view.evaluateJavascript("window.TV_DASH_MODE='$mode';window.TV_DASH_PATH='$path';\n$navScript", null)
+                applyZoom()
             }
         }
         web.isFocusable = true
@@ -71,6 +72,7 @@ class DashboardActivity : Activity() {
             web.loadUrl("$base/$path?external_auth=1")
         }
         web.requestFocus()
+        Config.addListener(zoomListener)
     }
 
     /** Schnittstelle, die die HA-Oberfläche selbst aufruft (gleiche Namen wie bei der Companion-App). */
@@ -115,6 +117,13 @@ class DashboardActivity : Activity() {
     }
 
     private fun js(code: String) = web.evaluateJavascript(code, null)
+
+    /** Zoom wie im Browser: kleiner = mehr Karten nebeneinander. Wirkt sofort, auch bei offenem Dashboard. */
+    private fun applyZoom() {
+        val z = Config.get(this).optInt("dashZoom", 75).coerceIn(30, 200) / 100.0
+        js("document.documentElement.style.zoom='$z';window.dispatchEvent(new Event('resize'));")
+    }
+    private val zoomListener: () -> Unit = { runOnUiThread { if (::web.isInitialized) applyZoom() } }
 
     /** Echte Tastendrücke an die Webansicht schicken (für Detailfenster: Tab-Fokus, Regler, Enter). */
     private fun sendKey(code: Int, shift: Boolean = false) {
@@ -161,6 +170,7 @@ class DashboardActivity : Activity() {
     }
 
     override fun onDestroy() {
+        Config.removeListener(zoomListener)
         web.destroy()
         super.onDestroy()
     }

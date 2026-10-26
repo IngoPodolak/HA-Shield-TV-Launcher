@@ -187,6 +187,31 @@ object SetupServer {
                         val f = File(Backgrounds.customDir(app), File(r.path.removePrefix("/bg/")).name)
                         if (!f.exists()) send(out, 404, "text/plain", ByteArray(0)) else send(out, 200, "image/jpeg", f.readBytes())
                     }
+                    r.path == "/api/notify" && r.method == "POST" -> {
+                        val title = r.query["title"] ?: ""
+                        val msg = r.query["msg"] ?: r.query["message"] ?: ""
+                        val dur = (r.query["duration"] ?: "").toIntOrNull() ?: 0
+                        var img: ByteArray? = r.body.takeIf { it.size > 100 }
+                        if (img == null && !r.query["image"].isNullOrBlank()) img = Notify.fetchImage(app, r.query["image"]!!)
+                        Notify.show(app, title, msg, img, dur)
+                        json(out, 200, JSONObject().put("ok", true).put("overlay", Overlay.canShow(app)).toString())
+                    }
+                    r.path == "/api/volume" && r.method == "POST" -> {
+                        val am = app.getSystemService(Context.AUDIO_SERVICE) as android.media.AudioManager
+                        val max = am.getStreamMaxVolume(android.media.AudioManager.STREAM_MUSIC)
+                        val pct = (r.query["v"] ?: "").toIntOrNull()?.coerceIn(0, 100)
+                        if (pct != null && !am.isVolumeFixed) {
+                            am.setStreamVolume(android.media.AudioManager.STREAM_MUSIC, Math.round(pct / 100.0 * max).toInt(), android.media.AudioManager.FLAG_SHOW_UI)
+                        }
+                        val cur = am.getStreamVolume(android.media.AudioManager.STREAM_MUSIC)
+                        json(out, 200, JSONObject().put("ok", true).put("fixed", am.isVolumeFixed).put("v", if (max > 0) cur * 100 / max else 0).toString())
+                    }
+                    r.path == "/api/volume" -> {
+                        val am = app.getSystemService(Context.AUDIO_SERVICE) as android.media.AudioManager
+                        val max = am.getStreamMaxVolume(android.media.AudioManager.STREAM_MUSIC)
+                        val cur = am.getStreamVolume(android.media.AudioManager.STREAM_MUSIC)
+                        json(out, 200, JSONObject().put("fixed", am.isVolumeFixed).put("v", if (max > 0) cur * 100 / max else 0).toString())
+                    }
                     r.path == "/api/key" && r.method == "POST" -> {
                         val ok = Remote.key(app, r.query["k"] ?: "")
                         json(out, if (ok) 200 else 400, JSONObject().put("ok", ok).put("error", Remote.lastError).toString())

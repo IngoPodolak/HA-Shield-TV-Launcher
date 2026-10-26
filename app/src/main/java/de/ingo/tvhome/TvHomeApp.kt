@@ -11,6 +11,7 @@ class TvHomeApp : Application() {
     override fun onCreate() {
         super.onCreate()
         SetupServer.start(this)
+        Notify.startNfaServer(this)
         startHaService(this)
     }
 

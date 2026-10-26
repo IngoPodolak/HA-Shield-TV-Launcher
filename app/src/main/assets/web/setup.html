@@ -84,6 +84,19 @@
   .textrow button { margin: 0; }
   .banner { width: 100%; background: rgba(255,138,122,.14); border: 1px solid rgba(255,138,122,.35); color: #ffd3cc; border-radius: 16px; padding: 12px 14px; font-size: 14px; display: none; }
 
+  /* Lautstärke-Regler */
+  .volbox { display: flex; align-items: center; gap: 12px; width: 100%; max-width: 340px; background: var(--glass); border: 1px solid var(--line); border-radius: 22px; padding: 10px 16px 10px 10px; -webkit-backdrop-filter: blur(24px); backdrop-filter: blur(24px); }
+  .vbtn { margin: 0; width: 44px; height: 44px; border-radius: 14px; padding: 0; display: flex; align-items: center; justify-content: center; background: var(--pill); color: var(--text); flex: none; }
+  .vbtn svg { width: 22px; height: 22px; }
+  .vbtn:active { background: var(--accent); color: #161514; }
+  #volv { width: 36px; text-align: right; font-variant-numeric: tabular-nums; color: var(--muted); font-size: 14px; }
+  input[type=range] { -webkit-appearance: none; appearance: none; flex: 1; width: 100%; height: 34px; background: transparent; margin: 0; }
+  input[type=range]::-webkit-slider-runnable-track { height: 8px; border-radius: 8px; background: linear-gradient(to right, #f3f1ed var(--p, 50%), rgba(255,255,255,.18) var(--p, 50%)); }
+  input[type=range]::-webkit-slider-thumb { -webkit-appearance: none; width: 26px; height: 26px; border-radius: 50%; background: #fff; margin-top: -9px; box-shadow: 0 2px 8px rgba(0,0,0,.4); }
+  input[type=range]::-moz-range-track { height: 8px; border-radius: 8px; background: rgba(255,255,255,.18); }
+  input[type=range]::-moz-range-progress { height: 8px; border-radius: 8px; background: #f3f1ed; }
+  input[type=range]::-moz-range-thumb { width: 26px; height: 26px; border-radius: 50%; background: #fff; border: 0; }
+
   /* Design */
   .hscroll { display: flex; gap: 12px; overflow-x: auto; padding: 2px 2px 8px; scroll-snap-type: x mandatory; }
   .hscroll::-webkit-scrollbar { display: none; }
@@ -134,12 +147,22 @@
         <button class="key" data-k="menu"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4 7h16M4 12h16M4 17h16"/></svg>Menü</button>
         <button class="key" data-k="forward"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M13 6l7 6-7 6zM4 6l7 6-7 6z"/></svg>Vorspulen</button>
       </div>
-      <div class="vol">
-        <button class="key" data-k="voldown" data-repeat="1"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4 9v6h4l5 4V5L8 9z"/><path d="M17 12h4"/></svg>Leiser</button>
-        <button class="key" data-k="mute"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4 9v6h4l5 4V5L8 9z"/><path d="M17 9l4 6M21 9l-4 6"/></svg>Stumm</button>
-        <button class="key" data-k="volup" data-repeat="1"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4 9v6h4l5 4V5L8 9z"/><path d="M17 12h4M19 10v4"/></svg>Lauter</button>
+      <div class="volbox">
+        <button class="vbtn" data-k="mute" aria-label="Stumm"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4 9v6h4l5 4V5L8 9z"/><path d="M17 9l4 6M21 9l-4 6"/></svg></button>
+        <input type="range" id="vol" min="0" max="100" step="1" value="50" aria-label="Lautstärke">
+        <span id="volv">–</span>
       </div>
+      <div class="hint" id="volHint" style="text-align:center;margin-top:-10px"></div>
       <div class="textrow"><input id="txt" type="text" placeholder="Text eingeben (z. B. Suche)" autocomplete="off"><button id="txtSend">Senden</button></div>
+    </div>
+    <div class="kicker">Nachricht an den Fernseher</div>
+    <div class="card">
+      <input id="nTitle" type="text" placeholder="Titel (optional)" autocomplete="off">
+      <textarea id="nMsg" rows="3" placeholder="Nachricht" style="margin-top:8px;resize:vertical"></textarea>
+      <input id="nImg" type="file" accept="image/*" hidden>
+      <div id="nPrev" style="display:none;margin-top:10px;position:relative"><img id="nPrevImg" alt="" style="width:100%;border-radius:14px;display:block"><button id="nImgDel" class="sec" style="position:absolute;right:8px;top:8px;margin:0;padding:6px 12px">Entfernen</button></div>
+      <div style="display:flex;gap:8px"><button id="nPick" class="sec" style="flex:1">Bild wählen</button><button id="nSend" style="flex:1">Senden</button></div>
+      <div class="msg" id="nMsgOut"></div>
     </div>
   </div>
 
@@ -151,6 +174,12 @@
     <div class="hscroll" id="layouts"></div>
     <div class="kicker">Stil</div>
     <div class="card" id="styleCard"></div>
+    <div class="kicker">Home-Assistant-Dashboard</div>
+    <div class="card">
+      <div class="opt" style="margin-top:2px;display:flex;justify-content:space-between"><span>Zoom</span><span id="zoomv"></span></div>
+      <input type="range" id="zoom" min="40" max="150" step="5" value="75" aria-label="Dashboard-Zoom">
+      <div class="hint">Kleiner = mehr Karten nebeneinander. Wirkt sofort, auch wenn das Dashboard gerade offen ist.</div>
+    </div>
     <div class="kicker">Hintergrund</div>
     <div class="chips" id="bgModes" style="margin:0 2px 12px"></div>
     <div class="bggrid" id="bgGrid"></div>

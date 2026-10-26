@@ -25,6 +25,18 @@
   .live { position: absolute; left: 10px; top: 10px; display: flex; align-items: center; gap: 6px; background: rgba(0,0,0,.5); font-size: 12px; padding: 3px 9px; border-radius: 99px; }
   .live i { width: 7px; height: 7px; border-radius: 50%; background: #ff5a4f; }
   .bar { position: absolute; left: 0; bottom: 0; height: 3px; background: rgba(255,255,255,.55); width: 100%; transform-origin: left; }
+  /* Nachrichten */
+  body.msg .box { position: absolute; inset: 0 0 auto 0; }
+  .mbox { display: none; flex-direction: column; }
+  body.msg .mbox { display: flex; }
+  body.msg .head, body.msg .cam { display: none; }
+  .mimg { width: 100%; display: block; max-height: 70vh; object-fit: cover; background: #000; }
+  .mtext { padding: 16px 20px 20px; }
+  .mtitle { display: flex; align-items: center; gap: 10px; font-size: 19px; font-weight: 600; margin-bottom: 6px; }
+  .mtitle svg { width: 22px; height: 22px; flex: none; opacity: .85; }
+  .mbody { font-size: 17px; line-height: 1.45; color: rgba(255,255,255,.88); white-space: pre-wrap; word-wrap: break-word; }
+  .mhint { margin-top: 12px; font-size: 12px; opacity: .5; }
+  .mbar { height: 3px; background: rgba(255,255,255,.55); transform-origin: left; }
 </style>
 </head>
 <body>
@@ -34,9 +46,30 @@
     <span class="title" id="title"></span>
   </div>
   <div class="cam" id="cam"><div class="hint">Taste drücken zum Schließen</div><div class="bar" id="bar"></div></div>
+  <div class="mbox" id="mbox">
+    <img class="mimg" id="mimg" alt="" hidden>
+    <div class="mtext">
+      <div class="mtitle"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4 5h16v11H8l-4 4z"/></svg><span id="mtitle"></span></div>
+      <div class="mbody" id="mbody"></div>
+      <div class="mhint">Taste drücken zum Schließen</div>
+    </div>
+    <div class="mbar" id="mbar"></div>
+  </div>
 </div>
 <script>
   const q = new URLSearchParams(location.search);
+  if (q.get('mode') === 'msg') {
+    document.body.classList.add('msg');
+    const secsM = Number(q.get('s')) || 15;
+    const t = q.get('t') || '', m = q.get('m') || '', im = q.get('img');
+    document.getElementById('mtitle').textContent = t || 'Nachricht';
+    document.getElementById('mbody').textContent = m;
+    if (!m) document.getElementById('mbody').style.display = 'none';
+    const fit = () => { try { PopupHost.resize(Math.ceil(document.querySelector('.box').getBoundingClientRect().height) + 2); } catch (e) {} };
+    if (im) { const el = document.getElementById('mimg'); el.hidden = false; el.onload = fit; el.onerror = () => { el.hidden = true; fit(); }; el.src = im; }
+    setTimeout(fit, 30);
+    document.getElementById('mbar').animate([{ transform: 'scaleX(1)' }, { transform: 'scaleX(0)' }], { duration: secsM * 1000, fill: 'forwards', easing: 'linear' });
+  } else {
   document.getElementById('title').textContent = q.get('t') || 'Es klingelt';
   const src = q.get('src');
   const secs = Number(q.get('s')) || 30;
@@ -56,6 +89,7 @@
     const n = document.createElement('div'); n.className = 'none'; n.textContent = 'Kein Kamerabild'; cam.appendChild(n);
   }
   document.getElementById('bar').animate([{ transform: 'scaleX(1)' }, { transform: 'scaleX(0)' }], { duration: secs * 1000, fill: 'forwards', easing: 'linear' });
+  }
 </script>
 </body>
 </html>
