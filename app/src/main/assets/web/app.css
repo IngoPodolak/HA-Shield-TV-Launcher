@@ -1,4 +1,4 @@
-/* TV Home – Maßeinheit: 1vw = 1 % der Bildschirmbreite, damit es auf jeder Auflösung gleich aussieht. */
+/* HA Shield TV Launcher – Maßeinheit: 1vw = 1 % der Bildschirmbreite, damit es auf jeder Auflösung gleich aussieht. */
 :root {
   --glass-bg: rgba(28, 28, 30, .20);
   --glass-border: rgba(255, 255, 255, .14);

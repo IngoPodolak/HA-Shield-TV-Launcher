@@ -1,6 +1,6 @@
 @echo off
 chcp 65001 >nul
-title TV Home installieren
+title HA Shield TV Launcher installieren
 setlocal
 
 rem ---- Adresse des Shield TV im Heimnetz
@@ -10,7 +10,7 @@ set ADB="%LOCALAPPDATA%\TVHome\platform-tools\adb.exe"
 
 echo.
 echo  ============================================
-echo    TV Home fuer den NVIDIA Shield installieren
+echo    HA Shield TV Launcher installieren
 echo  ============================================
 echo.
 
@@ -27,7 +27,7 @@ if not exist "%DIR%\platform-tools\adb.exe" (
 )
 
 echo [2/5] Lade die neueste TV-Home-Version von GitHub ...
-curl -sfL -o tv-home.apk https://github.com/IngoPodolak/Nvidia-Shield-Launcher/releases/latest/download/tv-home.apk || goto fehler
+curl -sfL -o tv-home.apk https://github.com/IngoPodolak/HA-Shield-TV-Launcher/releases/latest/download/tv-home.apk || goto fehler
 
 echo [3/5] Verbinde mit dem Shield (%SHIELD%) ...
 echo.
@@ -48,7 +48,7 @@ goto warten
 
 :verbunden
 echo   Verbunden.
-echo [4/5] Installiere TV Home ...
+echo [4/5] Installiere HA Shield TV Launcher ...
 %ADB% -s %SHIELD%:5555 install -r tv-home.apk || goto fehler
 %ADB% -s %SHIELD%:5555 shell appops set de.ingo.tvhome SYSTEM_ALERT_WINDOW allow
 %ADB% -s %SHIELD%:5555 shell appops set de.ingo.tvhome REQUEST_INSTALL_PACKAGES allow >nul 2>&1
@@ -56,16 +56,16 @@ echo [4/5] Installiere TV Home ...
 
 echo [5/5] Startseite festlegen
 echo.
-choice /c JN /m "  Soll TV Home ab sofort die Startseite sein (Home-Taste)"
+choice /c JN /m "  Soll HA Shield TV Launcher ab sofort die Startseite sein (Home-Taste)"
 if errorlevel 2 goto ohnehome
 %ADB% -s %SHIELD%:5555 shell pm disable-user --user 0 com.google.android.tvlauncher >nul 2>&1
 %ADB% -s %SHIELD%:5555 shell pm disable-user --user 0 com.google.android.leanbacklauncher >nul 2>&1
 %ADB% -s %SHIELD%:5555 shell input keyevent KEYCODE_HOME
-echo   TV Home ist jetzt die Startseite.
+echo   HA Shield TV Launcher ist jetzt die Startseite.
 goto fertig
 
 :ohnehome
-echo   Die Original-Startseite bleibt. TV Home findest du bei deinen Apps.
+echo   Die Original-Startseite bleibt. HA Shield TV Launcher findest du bei deinen Apps.
 
 :fertig
 echo.

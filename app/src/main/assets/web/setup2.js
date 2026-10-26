@@ -119,12 +119,12 @@
   q('#updCheck').onclick = updCheck;
   q('#updInstall').onclick = () => {
     const m = q('#updMsg');
-    m.textContent = 'Lade herunter und installiere … TV Home startet danach am Fernseher neu.'; m.className = 'msg ok';
+    m.textContent = 'Lade herunter und installiere … HA Shield TV Launcher startet danach am Fernseher neu.'; m.className = 'msg ok';
     q('#updInstall').disabled = true;
     api('/api/update/install', { method: 'POST' }).then((j) => {
       if (j.ok) { m.textContent = 'Update läuft. In etwa einer Minute ist der Fernseher wieder da – dann diese Seite neu laden.'; m.className = 'msg ok'; }
       else { m.textContent = j.message; m.className = 'msg ' + (/neueste/.test(j.message) ? 'ok' : 'err'); }
-    }).catch(() => { m.textContent = 'Update gestartet – der Fernseher startet TV Home gleich neu. Seite danach neu laden.'; m.className = 'msg ok'; });
+    }).catch(() => { m.textContent = 'Update gestartet – der Fernseher startet HA Shield TV Launcher gleich neu. Seite danach neu laden.'; m.className = 'msg ok'; });
   };
   updCheck();
 

@@ -13,7 +13,7 @@ import java.net.ServerSocket
 import java.net.Socket
 
 /**
- * Kleiner Webserver auf dem Shield (Port 8765). Darüber wird TV Home bequem
+ * Kleiner Webserver auf dem Shield (Port 8765). Darüber wird HA Shield TV Launcher bequem
  * vom Handy aus eingerichtet: Home-Assistant-Zugang, Geräte, Lieblings-Apps, eigene Fotos.
  */
 object SetupServer {
@@ -261,7 +261,7 @@ object SetupServer {
         val ok = err == null
         val title = if (ok) "TVHOME_OK" else "TVHOME_FAIL"
         val head = if (ok) "Angemeldet" else "Anmeldung fehlgeschlagen"
-        val text = if (ok) "TV Home ist jetzt mit Home Assistant verbunden. Du kannst dieses Fenster schließen."
+        val text = if (ok) "HA Shield TV Launcher ist jetzt mit Home Assistant verbunden. Du kannst dieses Fenster schließen."
         else (err ?: "") + " Bitte nochmal versuchen."
         val esc = text.replace("&", "&amp;").replace("<", "&lt;")
         return """<!doctype html><html lang="de"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">

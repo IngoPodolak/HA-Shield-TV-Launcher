@@ -56,7 +56,7 @@ class HaService : Service() {
             )
         }
         return NotificationCompat.Builder(this, "ha")
-            .setContentTitle("TV Home")
+            .setContentTitle("HA Shield TV Launcher")
             .setContentText("Verbunden mit Home Assistant")
             .setSmallIcon(android.R.drawable.ic_dialog_info)
             .setPriority(NotificationCompat.PRIORITY_MIN)

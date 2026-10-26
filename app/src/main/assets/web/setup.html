@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <meta name="theme-color" content="#15130f">
-<title>TV Home</title>
+<title>HA Shield TV Launcher</title>
 <style>
   :root { --text: #f5f3ef; --muted: rgba(245,243,239,.62); --glass: rgba(28,26,25,.58); --pill: rgba(255,255,255,.09); --line: rgba(255,255,255,.12);
           --accent: #f3f1ed; --ok: #7fdca4; --err: #ff8a7a; --serif: ui-serif, "New York", "Noto Serif", Georgia, serif; }
@@ -125,7 +125,7 @@
 </head>
 <body>
 <div id="bgimg"></div><div id="bgshade"></div>
-<header><div class="brand">TV Home</div><div class="status"><span class="dot"></span><span id="conn">Mit deinem Fernseher verbunden</span></div></header>
+<header><div class="brand">HA Shield TV Launcher</div><div class="status"><span class="dot"></span><span id="conn">Mit deinem Fernseher verbunden</span></div></header>
 <main>
   <!-- ============ Fernbedienung ============ -->
   <div class="tab" id="tab-remote">
@@ -206,7 +206,7 @@
     <div class="hint">Die IP-Adresse im Heimnetz ist am zuverlässigsten. Fällt sie aus, nutzt der Fernseher automatisch die anderen Adressen.</div>
     <div class="hint" id="tokenHint"></div>
     <button id="login">Mit Home-Assistant-Konto anmelden</button>
-    <div class="hint">Du meldest dich mit deinem normalen Benutzernamen und Passwort an. TV Home erstellt danach selbst ein dauerhaftes Zugriffstoken.</div>
+    <div class="hint">Du meldest dich mit deinem normalen Benutzernamen und Passwort an. HA Shield TV Launcher erstellt danach selbst ein dauerhaftes Zugriffstoken.</div>
     <details>
       <summary>Alternativ: Token selbst einfügen</summary>
       <ol>
@@ -302,7 +302,7 @@
       const q = new URLSearchParams(location.search);
       $('tokenHint').textContent = cfg.hasToken ? 'Ein Token ist gespeichert. Leer lassen, um es zu behalten.' : '';
       ['cameraName', 'lightName', 'fanName'].forEach((k) => ($(k).value = cfg[k] || ''));
-      $('ver').textContent = 'TV Home ' + s.version + (s.overlay ? '' : ' · Hinweis: Popup-Berechtigung fehlt noch');
+      $('ver').textContent = 'HA Shield TV Launcher ' + s.version + (s.overlay ? '' : ' · Hinweis: Popup-Berechtigung fehlt noch');
       renderApps();
       renderLogos();
       if (cfg.haUrl && cfg.hasToken) loadEntities();

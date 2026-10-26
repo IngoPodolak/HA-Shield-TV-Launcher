@@ -16,7 +16,7 @@ import org.json.JSONObject
 /**
  * Zweite Seite: zeigt ein Home-Assistant-Dashboard im Vollbild.
  * Die Anmeldung läuft über die offizielle „external auth“-Schnittstelle der HA-Oberfläche
- * (wie bei der Companion-App) mit dem Token, das TV Home ohnehin schon hat.
+ * (wie bei der Companion-App) mit dem Token, das HA Shield TV Launcher ohnehin schon hat.
  */
 class DashboardActivity : Activity() {
     private lateinit var web: WebView

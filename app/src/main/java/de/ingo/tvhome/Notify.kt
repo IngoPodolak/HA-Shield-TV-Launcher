@@ -14,12 +14,12 @@ import java.net.Socket
  * Nachrichten als Popup am Fernseher.
  * - Vom Handy über die Einrichtungsseite (Port 8765, mit PIN)
  * - Aus Home Assistant über die offizielle Integration „Notifications for Android TV / Fire TV“
- *   (TV Home spricht deren Protokoll auf Port 7676)
+ *   (HA Shield TV Launcher spricht deren Protokoll auf Port 7676)
  */
 object Notify {
     const val NFA_PORT = 7676
     @Volatile private var started = false
-    /** true = TV Home empfängt Nachrichten aus Home Assistant; false = Anschluss von einer anderen App belegt. */
+    /** true = HA Shield TV Launcher empfängt Nachrichten aus Home Assistant; false = Anschluss von einer anderen App belegt. */
     @Volatile var nfaReady = false
 
     /** Zeigt eine Nachricht. [image] darf null sein. [seconds] <= 0 = Standard aus den Einstellungen. */

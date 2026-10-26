@@ -1,4 +1,4 @@
-# TV Home – eigene Startseite für den NVIDIA Shield TV
+# HA Shield TV Launcher – eigene Startseite für den NVIDIA Shield TV
 
 Eine schlichte Startseite im Stil von Dock- und Listen-Layouts über schönen Landschaftsfotos, mit Home-Assistant-Anbindung:
 
@@ -28,7 +28,7 @@ adb shell appops set de.ingo.tvhome SYSTEM_ALERT_WINDOW allow
 adb shell pm disable-user --user 0 com.google.android.tvlauncher
 ```
 
-Die dritte Zeile erlaubt das Klingel-Popup. Die vierte macht TV Home zur Startseite (die Original-Startseite wird nur deaktiviert, nicht gelöscht).
+Die dritte Zeile erlaubt das Klingel-Popup. Die vierte macht HA Shield TV Launcher zur Startseite (die Original-Startseite wird nur deaktiviert, nicht gelöscht).
 
 ## Einrichten
 
@@ -37,7 +37,7 @@ Dort Home-Assistant-Adresse und Token eintragen, Geräte auswählen, Apps sortie
 
 ## Updates
 
-Einstellungen → **Nach Update suchen**. Beim ersten Mal fragt Android, ob TV Home Apps installieren darf.
+Einstellungen → **Nach Update suchen**. Beim ersten Mal fragt Android, ob HA Shield TV Launcher Apps installieren darf.
 
 ## Zurück zur Original-Startseite
 

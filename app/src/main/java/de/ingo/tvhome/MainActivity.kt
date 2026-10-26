@@ -75,7 +75,7 @@ class MainActivity : Activity() {
         super.onDestroy()
     }
 
-    /** Home-Taste, während TV Home schon offen ist: zurück zur Startansicht. */
+    /** Home-Taste, während HA Shield TV Launcher schon offen ist: zurück zur Startansicht. */
     override fun onNewIntent(intent: android.content.Intent?) {
         super.onNewIntent(intent)
         js("window.tvHome && tvHome()")

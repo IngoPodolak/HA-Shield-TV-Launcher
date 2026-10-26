@@ -1,14 +1,14 @@
 @echo off
 chcp 65001 >nul
-title TV Home entfernen
+title HA Shield TV Launcher entfernen
 set SHIELD=192.168.0.158
 set ADB="%LOCALAPPDATA%\TVHome\platform-tools\adb.exe"
 if not exist %ADB% (
-  echo Die Android-Werkzeuge fehlen. Bitte zuerst "TV Home installieren.bat" einmal starten.
+  echo Die Android-Werkzeuge fehlen. Bitte zuerst "HA Shield TV Launcher installieren.bat" einmal starten.
   pause
   exit /b 1
 )
-echo Stelle die Original-Startseite wieder her und entferne TV Home ...
+echo Stelle die Original-Startseite wieder her und entferne HA Shield TV Launcher ...
 %ADB% connect %SHIELD%:5555 >nul 2>&1
 %ADB% -s %SHIELD%:5555 shell pm enable com.google.android.tvlauncher
 %ADB% -s %SHIELD%:5555 shell pm enable com.google.android.leanbacklauncher >nul 2>&1

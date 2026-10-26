@@ -15,7 +15,7 @@ import java.util.concurrent.TimeUnit
 
 /**
  * Anmeldung mit dem normalen Home-Assistant-Login (Benutzername + Passwort).
- * Danach erzeugt TV Home selbst ein dauerhaftes Zugriffstoken – niemand muss ein Token abtippen.
+ * Danach erzeugt HA Shield TV Launcher selbst ein dauerhaftes Zugriffstoken – niemand muss ein Token abtippen.
  */
 object Auth {
     /** Adresse der Home-Assistant-Anmeldeseite. [origin] ist z. B. http://127.0.0.1:8765 */
@@ -47,7 +47,7 @@ object Auth {
         var token: String? = null
         var error: String? = null
         val wsUrl = haUrl.replaceFirst("https://", "wss://").replaceFirst("http://", "ws://") + "/api/websocket"
-        val name = "TV Home Shield " + SimpleDateFormat("yyyy-MM-dd HH:mm", Locale.GERMANY).format(Date())
+        val name = "HA Shield TV Launcher Shield " + SimpleDateFormat("yyyy-MM-dd HH:mm", Locale.GERMANY).format(Date())
         val ws = TvHomeApp.http.newWebSocket(Request.Builder().url(wsUrl).build(), object : WebSocketListener() {
             override fun onMessage(webSocket: WebSocket, text: String) {
                 val m = try { JSONObject(text) } catch (e: Exception) { return }

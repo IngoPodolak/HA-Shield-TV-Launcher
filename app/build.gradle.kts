@@ -4,7 +4,7 @@ plugins {
 }
 
 val runNumber = (System.getenv("GITHUB_RUN_NUMBER") ?: "1").toInt()
-val repoName = System.getenv("GITHUB_REPOSITORY") ?: "IngoPodolak/Nvidia-Shield-Launcher"
+val repoName = System.getenv("GITHUB_REPOSITORY") ?: "IngoPodolak/HA-Shield-TV-Launcher"
 
 android {
     namespace = "de.ingo.tvhome"

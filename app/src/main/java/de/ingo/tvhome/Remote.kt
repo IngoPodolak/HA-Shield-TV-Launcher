@@ -12,7 +12,7 @@ import java.util.concurrent.Executors
 /**
  * Fernbedienung vom Handy aus.
  * Steuerkreuz, Zurück, Home usw. funktionieren in allen Apps über das Netzwerk-Debugging des Shield
- * (TV Home verbindet sich mit sich selbst; beim ersten Mal fragt der Fernseher einmal nach Erlaubnis).
+ * (HA Shield TV Launcher verbindet sich mit sich selbst; beim ersten Mal fragt der Fernseher einmal nach Erlaubnis).
  * Wiedergabe-Tasten gehen direkt und ohne Verzögerung.
  */
 object Remote {
@@ -92,7 +92,7 @@ object Remote {
 
     /**
      * Update ohne Rückfrage installieren: APK auf den Shield kopieren und per Paketmanager installieren.
-     * Der Befehl läuft im Hintergrund weiter, auch wenn TV Home dabei beendet wird, und startet die App danach neu.
+     * Der Befehl läuft im Hintergrund weiter, auch wenn HA Shield TV Launcher dabei beendet wird, und startet die App danach neu.
      */
     fun installApk(ctx: Context, apk: File): Boolean {
         return try {

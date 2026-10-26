@@ -73,7 +73,7 @@ object Updater {
                         .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
                 )
             } catch (_: Exception) {}
-            return "Bitte erst erlauben, dass TV Home Apps installieren darf, dann nochmal versuchen."
+            return "Bitte erst erlauben, dass HA Shield TV Launcher Apps installieren darf, dann nochmal versuchen."
         }
         return try {
             val dir = File(ctx.cacheDir, "updates").apply { mkdirs() }

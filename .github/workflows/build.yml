@@ -50,6 +50,6 @@ jobs:
         uses: softprops/action-gh-release@v2
         with:
           tag_name: v${{ github.run_number }}
-          name: TV Home ${{ github.run_number }}
+          name: HA Shield TV Launcher ${{ github.run_number }}
           files: tv-home.apk
           make_latest: true
