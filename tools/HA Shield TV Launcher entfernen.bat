@@ -8,11 +8,15 @@ if not exist %ADB% (
   pause
   exit /b 1
 )
+set /p DEV="IP-Adresse des Geraets (Enter = Shield %SHIELD%): "
+if not "%DEV%"=="" set SHIELD=%DEV%
 echo Stelle die Original-Startseite wieder her und entferne HA Shield TV Launcher ...
 %ADB% connect %SHIELD%:5555 >nul 2>&1
-%ADB% -s %SHIELD%:5555 shell pm enable com.google.android.tvlauncher
+%ADB% -s %SHIELD%:5555 shell pm enable com.google.android.tvlauncher >nul 2>&1
 %ADB% -s %SHIELD%:5555 shell pm enable com.google.android.leanbacklauncher >nul 2>&1
+%ADB% -s %SHIELD%:5555 shell pm enable com.google.android.apps.tv.launcherx >nul 2>&1
+%ADB% -s %SHIELD%:5555 shell pm enable com.google.android.tungsten.setupwraith >nul 2>&1
 %ADB% -s %SHIELD%:5555 uninstall de.ingo.tvhome
 %ADB% -s %SHIELD%:5555 shell input keyevent KEYCODE_HOME
-echo Fertig. Der Shield hat wieder seine normale Startseite.
+echo Fertig. Das Geraet hat wieder seine normale Startseite.
 pause

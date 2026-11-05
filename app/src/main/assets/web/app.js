@@ -11,7 +11,7 @@
     smart: 'on', camPreview: 'live', appliances: 'on',
     popupEnabled: true, popupPos: 'tr', popupSize: 'm', popupSeconds: 30, popupCam: 'live', camAspect: '4:3', ringPlayback: 'resume',
     dashPath: 'lovelace', dashTitle: 'Übersicht', dashMode: 'view', dashZoom: 75,
-    msgEnabled: true, msgSeconds: 15, msgPos: 'tr', msgSize: 'm', dashSidebar: 'hide', dashTile: 'on',
+    msgEnabled: true, msgSeconds: 15, msgPos: 'tr', msgSize: 'm', dashSidebar: 'hide', dashTile: 'on', beatTile: 'on',
     cinemaEnabled: true, cinemaLights: [], cinemaOffDelay: 3, cinemaOnDelay: 3,
     favorites: [],
     haHost: '192.168.0.5', haPort: 80,
@@ -82,6 +82,9 @@
     { key: 'dashSidebar', label: 'HA-Seitenleiste', opts: [['hide', 'Ausblenden'], ['show', 'Anzeigen']] },
     { key: 'dashTile', label: 'Kachel im Dock', opts: [['on', 'Anzeigen'], ['off', 'Ausblenden']] },
     { act: 'dashopen', label: 'Dashboard öffnen', icon: 'dash', value: () => '' },
+    { section: 'Beatify (Musik-Quiz)' },
+    { key: 'beatTile', label: 'Kachel im Dock', opts: [['on', 'Anzeigen'], ['off', 'Ausblenden']] },
+    { act: 'beatopen', label: 'Beatify öffnen', icon: 'beat', value: () => '' },
     { section: 'Darstellung' },
     { key: 'layout', label: 'Layout', opts: [['dock', 'Dock'], ['list', 'Liste']] },
     { key: 'material', label: 'Material', opts: [['clear', 'Klar getönt'], ['frost', 'Milchglas'], ['dark', 'Dunkel getönt'], ['none', 'Ohne']] },
@@ -196,8 +199,10 @@
   const iconCache = {};
   const PREFERRED = ['stremio', 'netflix', 'disney', 'youtube', 'apple tv', 'prime video', 'plex', 'mediathek', 'zdf', 'spotify', 'kodi', 'waipu', 'joyn', 'magenta', 'dazn', 'sky', 'wow'];
   const DASH_APP = { pkg: '__dashboard__', label: 'Home Assistant', banner: false, virtual: true };
+  const BEAT_APP = { pkg: '__beatify__', label: 'Beatify', banner: false, virtual: true };
   function loadApps() {
     try { apps = JSON.parse(Android.getApps() || '[]'); } catch (e) { apps = []; }
+    if (cfg.beatTile !== 'off') apps.unshift(BEAT_APP);
     if (cfg.dashTile !== 'off') apps.unshift(DASH_APP);
   }
   /** Kachel „Home Assistant“ in die Leiste aufnehmen bzw. entfernen. */
@@ -207,6 +212,9 @@
     const has = cfg.favorites.includes(DASH_APP.pkg);
     if (cfg.dashTile !== 'off' && !has) saveCfg({ favorites: cfg.favorites.concat([DASH_APP.pkg]) });
     if (cfg.dashTile === 'off' && has) saveCfg({ favorites: cfg.favorites.filter((p) => p !== DASH_APP.pkg) });
+    const hasB = cfg.favorites.includes(BEAT_APP.pkg);
+    if (cfg.beatTile !== 'off' && !hasB) saveCfg({ favorites: cfg.favorites.concat([BEAT_APP.pkg]) });
+    if (cfg.beatTile === 'off' && hasB) saveCfg({ favorites: cfg.favorites.filter((p) => p !== BEAT_APP.pkg) });
   }
   function favApps() {
     const byPkg = {}; apps.forEach((a) => (byPkg[a.pkg] = a));
@@ -227,11 +235,12 @@
     saveCfg({ iconOverrides: o }); renderApps(a.pkg);
   }
   function appIcon(a, forceStyle) {
-    if (a.pkg === DASH_APP.pkg) {
+    if (a.pkg === DASH_APP.pkg || a.pkg === BEAT_APP.pkg) {
+      const beat = a.pkg === BEAT_APP.pkg;
       const style = forceStyle || iconStyleOf(a);
-      const svg = ICON.dash.replace('<svg ', '<svg xmlns="http://www.w3.org/2000/svg" width="96" height="96" ').replace(/currentColor/g, '#ffffff').replace('stroke-width="1.7"', 'stroke-width="1.5"');
+      const svg = ICON[beat ? 'beat' : 'dash'].replace('<svg ', '<svg xmlns="http://www.w3.org/2000/svg" width="96" height="96" ').replace(/currentColor/g, '#ffffff').replace('stroke-width="1.7"', 'stroke-width="1.5"');
       const img = h('img', { src: 'data:image/svg+xml;utf8,' + encodeURIComponent(svg) });
-      if (style === 'color' || style === 'banner') img.style.cssText = 'background:#1f6fb5;border-radius:22%;padding:12%';
+      if (style === 'color' || style === 'banner') img.style.cssText = 'background:' + (beat ? 'linear-gradient(135deg,#ff3d77,#7b2ff7)' : '#1f6fb5') + ';border-radius:22%;padding:12%';
       return img;
     }
     if ((forceStyle || iconStyleOf(a)) === 'custom') {
@@ -247,6 +256,7 @@
   }
   function launch(a) {
     if (a.pkg === DASH_APP.pkg) { Android.openDashboard(); return; }
+    if (a.pkg === BEAT_APP.pkg) { Android.openBeatify(); return; }
     if (!Android.launch(a.pkg)) toast(a.label + ' lässt sich nicht starten');
   }
   function ensureFavs() { if (!cfg.favorites || !cfg.favorites.length) saveCfg({ favorites: favApps().map((a) => a.pkg) }); }
@@ -562,7 +572,7 @@
   }
   function onCfgChanged(key) {
     if (key === 'haHost' || key === 'haPort') applyHaAddress();
-    if (key === 'dashTile') { syncDashTile(); renderApps(); }
+    if (key === 'dashTile' || key === 'beatTile') { syncDashTile(); renderApps(); }
     if (key === 'iconStyle') for (const k in iconCache) delete iconCache[k];
     applyCfg();
     if (key === 'layout') { dockOffset = 0; listOffset = 0; renderApps(); }
@@ -578,6 +588,7 @@
     else if (a === 'cinemaLights') openCinemaPicker();
     else if (a === 'dashpick') openDashPicker();
     else if (a === 'dashopen') Android.openDashboard();
+    else if (a === 'beatopen') Android.openBeatify();
     else if (a === 'bgpicker') openBgPicker();
     else if (a === 'testpopup') {
       if (!Android.canOverlay()) toast('Popup-Berechtigung fehlt – wird bei der Installation per Befehl gesetzt');
@@ -1093,11 +1104,11 @@
   // ------------------------------------------------------------------ Aufrufe von Android
   window.tvConfigChanged = () => {
     const oldFav = JSON.stringify([cfg.favorites, cfg.customLogos, cfg.iconOverrides]), oldBg = JSON.stringify([cfg.bgChanged, cfg.bgMode, cfg.bgId, cfg.bgInterval]);
-    const oldLayout = JSON.stringify([cfg.layout, cfg.iconStyle, cfg.labels, cfg.textSize, cfg.dashTile]);
+    const oldLayout = JSON.stringify([cfg.layout, cfg.iconStyle, cfg.labels, cfg.textSize, cfg.dashTile, cfg.beatTile]);
     loadCfg(); applyCfg(); connectHa();
     if (JSON.stringify([cfg.favorites, cfg.customLogos, cfg.iconOverrides]) !== oldFav) { for (const k in iconCache) delete iconCache[k]; renderApps(); }
     if (JSON.stringify([cfg.bgChanged, cfg.bgMode, cfg.bgId, cfg.bgInterval]) !== oldBg) { bgIndex = 0; loadBackgroundLists(); startBg(true); }
-    if (JSON.stringify([cfg.layout, cfg.iconStyle, cfg.labels, cfg.textSize, cfg.dashTile]) !== oldLayout) {
+    if (JSON.stringify([cfg.layout, cfg.iconStyle, cfg.labels, cfg.textSize, cfg.dashTile, cfg.beatTile]) !== oldLayout) {
       for (const k in iconCache) delete iconCache[k]; dockOffset = 0; listOffset = 0; syncDashTile(); renderApps(); setFocus(defaultFocus());
     }
     renderSmart(true); renderStatus(); refreshModals();

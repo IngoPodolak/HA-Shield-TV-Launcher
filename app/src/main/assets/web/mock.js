@@ -28,7 +28,7 @@
     testPopup: () => {}, testMessage: () => {}, nfaReady: () => true,
     checkUpdate: () => JSON.stringify({ current: 1, latest: 1, available: false }),
     installUpdate: () => '',
-    openAndroidSettings: () => {}, openOverlaySettings: () => {}, openDashboard: () => { window.__dashOpened = (window.__dashOpened || 0) + 1; },
+    openAndroidSettings: () => {}, openOverlaySettings: () => {}, openBeatify: () => {}, openDashboard: () => { window.__dashOpened = (window.__dashOpened || 0) + 1; },
     httpGet: () => ''
   };
 
