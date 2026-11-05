@@ -19,6 +19,9 @@ object Remote {
     private val io = Executors.newSingleThreadExecutor()
     @Volatile private var dadb: Dadb? = null
     @Volatile var lastError: String = ""
+    /** null = noch nicht geprüft; false = kein Debugging (z. B. Google TV) -> Android-TV-Fernbedienung nutzen */
+    @Volatile var adbWorks: Boolean? = null
+    const val NEED_PAIR = "Bitte einmal mit dem Fernseher koppeln (Knopf unten)."
 
     private val KEYS = mapOf(
         "up" to KeyEvent.KEYCODE_DPAD_UP, "down" to KeyEvent.KEYCODE_DPAD_DOWN,
@@ -70,7 +73,17 @@ object Remote {
             return true
         }
         val code = KEYS[name] ?: return false
-        io.execute { shell(ctx, "input keyevent $code") }
+        if (adbWorks == false && Atv.isPaired(ctx)) {
+            io.execute { if (!Atv.key(ctx, code)) lastError = Atv.lastError }
+            return true
+        }
+        io.execute {
+            if (shell(ctx, "input keyevent $code")) adbWorks = true
+            else {
+                adbWorks = false
+                lastError = if (!Atv.isPaired(ctx)) NEED_PAIR else if (Atv.key(ctx, code)) "" else Atv.lastError
+            }
+        }
         return true
     }
 
@@ -86,7 +99,8 @@ object Remote {
                 else -> "\\" + c
             }
         }.joinToString("")
-        io.execute { shell(ctx, "input text '$escaped'") }
+        if (adbWorks == false && Atv.isPaired(ctx)) { io.execute { Atv.text(ctx, clean) }; return true }
+        io.execute { if (!shell(ctx, "input text '$escaped'") && Atv.isPaired(ctx)) Atv.text(ctx, clean) }
         return true
     }
 
@@ -109,5 +123,11 @@ object Remote {
     }
 
     /** Verbindung prüfen (löst beim ersten Mal die Abfrage am Fernseher aus). */
-    fun test(ctx: Context): Boolean = shell(ctx, "echo ok")
+    fun test(ctx: Context): Boolean {
+        if (shell(ctx, "echo ok")) { adbWorks = true; return true }
+        adbWorks = false
+        if (Atv.isPaired(ctx)) { lastError = ""; return true }
+        lastError = NEED_PAIR
+        return false
+    }
 }

@@ -130,9 +130,19 @@
   <!-- ============ Fernbedienung ============ -->
   <div class="tab" id="tab-remote">
     <h1>Fernbedienung</h1>
-    <p class="lead">Funktioniert in allen Apps auf dem Shield.</p>
+    <p class="lead">Funktioniert in allen Apps auf dem Fernseher.</p>
     <div class="remote">
       <div class="banner" id="remoteBanner"></div>
+      <div class="card" id="pairBox" style="display:none;width:100%;box-sizing:border-box">
+        <div style="font-weight:600;margin-bottom:6px">Fernbedienung koppeln</div>
+        <div class="hint" id="pairHint">Einmalig nötig (z. B. bei Google TV). Tippe auf „Koppeln starten“ – am Fernseher erscheint dann ein 6-stelliger Code.</div>
+        <button id="pairStart" style="width:100%;margin-top:10px">Koppeln starten</button>
+        <div id="pairCodeRow" style="display:none;gap:8px;margin-top:10px">
+          <input id="pairCode" type="text" maxlength="6" placeholder="Code vom Fernseher" autocomplete="off" autocapitalize="characters" style="flex:1;text-transform:uppercase;letter-spacing:.2em">
+          <button id="pairOk" style="flex:none">Koppeln</button>
+        </div>
+        <div class="msg" id="pairMsg"></div>
+      </div>
       <div class="dpad">
         <button class="k up" data-k="up" aria-label="Hoch"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M6 15l6-6 6 6"/></svg></button>
         <button class="k left" data-k="left" aria-label="Links"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M15 6l-6 6 6 6"/></svg></button>

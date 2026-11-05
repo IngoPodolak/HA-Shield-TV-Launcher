@@ -219,7 +219,8 @@ object SetupServer {
                     }
                     r.path == "/api/key" && r.method == "POST" -> {
                         val ok = Remote.key(app, r.query["k"] ?: "")
-                        json(out, if (ok) 200 else 400, JSONObject().put("ok", ok).put("error", Remote.lastError).toString())
+                        json(out, if (ok) 200 else 400, JSONObject().put("ok", ok).put("error", Remote.lastError)
+                            .put("pair", Remote.lastError.isNotEmpty() && Remote.adbWorks == false).toString())
                     }
                     r.path == "/api/text" && r.method == "POST" -> {
                         val ok = Remote.text(app, String(r.body, Charsets.UTF_8))
@@ -227,7 +228,17 @@ object SetupServer {
                     }
                     r.path == "/api/remote-test" && r.method == "POST" -> {
                         val ok = Remote.test(app)
-                        json(out, 200, JSONObject().put("ok", ok).put("error", Remote.lastError).toString())
+                        json(out, 200, JSONObject().put("ok", ok).put("error", Remote.lastError)
+                            .put("pair", !ok).put("atv", Remote.adbWorks == false).toString())
+                    }
+                    r.path == "/api/pair/start" && r.method == "POST" -> {
+                        val ok = Atv.startPairing(app)
+                        json(out, 200, JSONObject().put("ok", ok).put("error", Atv.lastError).toString())
+                    }
+                    r.path == "/api/pair/finish" && r.method == "POST" -> {
+                        val ok = Atv.finishPairing(app, r.query["code"] ?: "")
+                        if (ok) Remote.lastError = ""
+                        json(out, 200, JSONObject().put("ok", ok).put("error", Atv.lastError).toString())
                     }
                     r.path == "/api/backgrounds/builtin" -> {
                         val arr = JSONArray(Backgrounds.builtinJson(app))

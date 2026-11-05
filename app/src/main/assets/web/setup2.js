@@ -21,7 +21,7 @@
   function sendKey(k) {
     if (navigator.vibrate) try { navigator.vibrate(12); } catch (e) {}
     fetch('/api/key?k=' + encodeURIComponent(k) + '&pin=' + PIN, { method: 'POST' })
-      .then((r) => r.json()).then((j) => { if (j.error) showBanner(j.error); else showBanner(''); })
+      .then((r) => r.json()).then((j) => { if (j.error) showBanner(j.error); else showBanner(''); if (j.pair) showPair(true); })
       .catch(() => showBanner('Der Fernseher antwortet nicht. Ist er an und im gleichen WLAN?'));
   }
   let checked = false;
@@ -29,9 +29,26 @@
     if (checked) return; checked = true;
     showBanner('Verbinde mit dem Fernseher … Falls dort „Debugging zulassen?“ erscheint: „Immer von diesem Computer zulassen“ anhaken und OK drücken.');
     fetch('/api/remote-test?pin=' + PIN, { method: 'POST' }).then((r) => r.json())
-      .then((j) => showBanner(j.ok ? '' : (j.error || 'Keine Verbindung zum Fernseher.')))
+      .then((j) => { showBanner(j.ok ? '' : (j.error || 'Keine Verbindung zum Fernseher.')); showPair(!!j.pair); })
       .catch(() => showBanner('Der Fernseher antwortet nicht.'));
   }
+  // ---------------- Koppeln (Android-TV-Fernbedienung, z. B. Google TV)
+  const pairBox = q('#pairBox'), pairMsg = q('#pairMsg');
+  function showPair(on) { pairBox.style.display = on ? 'block' : 'none'; }
+  q('#pairStart').onclick = () => {
+    pairMsg.textContent = 'Verbinde …'; pairMsg.className = 'msg';
+    fetch('/api/pair/start?pin=' + PIN, { method: 'POST' }).then((r) => r.json()).then((j) => {
+      if (j.ok) { q('#pairCodeRow').style.display = 'flex'; q('#pairCode').focus(); pairMsg.textContent = 'Code vom Fernseher eingeben.'; }
+      else { pairMsg.textContent = j.error || 'Koppeln nicht möglich.'; pairMsg.className = 'msg err'; }
+    }).catch(() => { pairMsg.textContent = 'Der Fernseher antwortet nicht.'; pairMsg.className = 'msg err'; });
+  };
+  q('#pairOk').onclick = () => {
+    const c = q('#pairCode').value.trim();
+    fetch('/api/pair/finish?code=' + encodeURIComponent(c) + '&pin=' + PIN, { method: 'POST' }).then((r) => r.json()).then((j) => {
+      if (j.ok) { pairMsg.textContent = 'Gekoppelt – die Fernbedienung ist bereit.'; pairMsg.className = 'msg ok'; q('#pairCodeRow').style.display = 'none'; showBanner(''); setTimeout(() => showPair(false), 2500); }
+      else { pairMsg.textContent = j.error || 'Koppeln fehlgeschlagen.'; pairMsg.className = 'msg err'; }
+    }).catch(() => { pairMsg.textContent = 'Der Fernseher antwortet nicht.'; pairMsg.className = 'msg err'; });
+  };
   qa('[data-k]').forEach((b) => {
     let t1 = null, t2 = null;
     const repeat = b.dataset.repeat || b.closest('.dpad') && b.dataset.k !== 'ok';
