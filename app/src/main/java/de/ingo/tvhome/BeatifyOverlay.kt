@@ -27,6 +27,14 @@ object BeatifyOverlay {
 
     val isOpen get() = root != null
 
+    /** Beatify für einen großen Bildschirm (1920 px breit) auslegen, sonst überlappen die Elemente auf 1080p-Geräten. */
+    fun fitJs(ctx: android.content.Context): String {
+        val z = Config.get(ctx).optInt("beatZoom", 100).coerceIn(50, 200)
+        val w = Math.round(1920 * 100.0 / z)
+        return "(function(){var m=document.querySelector('meta[name=viewport]');if(!m){m=document.createElement('meta');m.name='viewport';document.head.appendChild(m);}var s=(screen.width||960)/$w;m.content='width=$w,initial-scale='+s+',minimum-scale='+s+',maximum-scale='+s+',user-scalable=no';})()"
+    }
+
+
     private class Catcher(ctx: Context) : FrameLayout(ctx) {
         override fun dispatchKeyEvent(event: KeyEvent): Boolean {
             if (event.keyCode == KeyEvent.KEYCODE_BACK) {
@@ -57,10 +65,13 @@ object BeatifyOverlay {
                 mediaPlaybackRequiresUserGesture = false
                 mixedContentMode = WebSettings.MIXED_CONTENT_ALWAYS_ALLOW
                 textZoom = 100
+                useWideViewPort = true
+                loadWithOverviewMode = true
             }
             wv.isFocusable = false
             wv.isFocusableInTouchMode = false
             wv.webViewClient = object : WebViewClient() {
+                override fun onPageFinished(view: WebView, url: String) { view.evaluateJavascript(fitJs(app), null) }
                 override fun onReceivedError(view: WebView, code: Int, desc: String?, url: String?) {
                     message(view, "Beatify ist nicht erreichbar. Läuft Home Assistant und ist Beatify installiert?")
                 }

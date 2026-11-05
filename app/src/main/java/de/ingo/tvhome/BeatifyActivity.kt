@@ -31,8 +31,11 @@ class BeatifyActivity : Activity() {
             mediaPlaybackRequiresUserGesture = false
             mixedContentMode = WebSettings.MIXED_CONTENT_ALWAYS_ALLOW
             textZoom = 100
+            useWideViewPort = true
+            loadWithOverviewMode = true
         }
         web.webViewClient = object : WebViewClient() {
+            override fun onPageFinished(view: WebView, url: String) { view.evaluateJavascript(BeatifyOverlay.fitJs(this@BeatifyActivity), null) }
             override fun onReceivedError(view: WebView, code: Int, desc: String?, url: String?) {
                 show("Beatify ist nicht erreichbar. Läuft Home Assistant und ist Beatify installiert?")
             }
