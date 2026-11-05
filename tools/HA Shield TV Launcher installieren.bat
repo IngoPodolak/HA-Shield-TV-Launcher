@@ -57,7 +57,10 @@ goto warten
 :verbunden
 echo   Verbunden.
 echo [4/5] Installiere HA Shield TV Launcher ...
-%ADB% -s %T% install -r tv-home.apk || goto fehler
+rem Play Protect blockiert sonst die Installation auf Google TV
+%ADB% -s %T% shell settings put global verifier_verify_adb_installs 0 >nul 2>&1
+%ADB% -s %T% shell settings put global package_verifier_enable 0 >nul 2>&1
+%ADB% -s %T% install -r -g --bypass-low-target-sdk-block tv-home.apk || %ADB% -s %T% install -r tv-home.apk || goto fehler
 %ADB% -s %T% shell appops set de.ingo.tvhome SYSTEM_ALERT_WINDOW allow
 %ADB% -s %T% shell appops set de.ingo.tvhome REQUEST_INSTALL_PACKAGES allow >nul 2>&1
 %ADB% -s %T% shell am start -n de.ingo.tvhome/.MainActivity >nul 2>&1
