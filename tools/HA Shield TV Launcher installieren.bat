@@ -64,8 +64,6 @@ rem Play Protect blockiert sonst die Installation auf Google TV
 %ADB% -s %T% shell appops set de.ingo.tvhome SYSTEM_ALERT_WINDOW allow
 %ADB% -s %T% shell appops set de.ingo.tvhome REQUEST_INSTALL_PACKAGES allow >nul 2>&1
 %ADB% -s %T% shell am start -n de.ingo.tvhome/.MainActivity >nul 2>&1
-rem Debugging zusaetzlich auf Port 5555 oeffnen (fuer stilles Update, bis zum naechsten Neustart)
-%ADB% -s %T% tcpip 5555 >nul 2>&1
 
 echo [5/5] Startseite festlegen
 echo.
@@ -84,6 +82,8 @@ goto fertig
 echo   Die Original-Startseite bleibt. HA Shield TV Launcher findest du bei deinen Apps.
 
 :fertig
+rem Debugging zusaetzlich auf Port 5555 oeffnen (fuer stilles Update, bis zum naechsten Neustart)
+%ADB% -s %T% tcpip 5555 >nul 2>&1
 echo.
 echo  Fertig! Auf dem Fernseher: Zahnrad (Einstellungen) - "Am Fernseher anmelden"
 echo  oder "Mit dem Handy anmelden (QR-Code)".
