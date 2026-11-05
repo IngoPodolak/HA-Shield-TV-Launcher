@@ -5,7 +5,7 @@
   // ------------------------------------------------------------------ Einstellungen
   const DEF = {
     layout: 'dock', material: 'clear', focus: 'glass', iconStyle: 'white', labels: 'on',
-    clock: '24', date: 'on', textSize: 'normal',
+    clock: '24', date: 'on', textSize: 'normal', uiZoom: 100,
     bgMode: 'fixed', bgId: '01', bgInterval: 15, dim: 10, kenburns: 'on',
     artAfter: 5, artClock: 'big',
     smart: 'on', camPreview: 'live', appliances: 'on',
@@ -93,6 +93,7 @@
     { key: 'labels', label: 'App-Namen im Dock', opts: [['on', 'Anzeigen'], ['off', 'Ausblenden']] },
     { key: 'clock', label: 'Uhr', opts: [['24', '24 Std.'], ['12', '12 Std.'], ['off', 'Aus']] },
     { key: 'date', label: 'Datum', opts: [['on', 'An'], ['off', 'Aus']] },
+    { key: 'uiZoom', label: 'Zoom', opts: [60, 65, 70, 75, 80, 85, 90, 95, 100, 110, 120].map((z) => [z, z + ' %']) },
     { key: 'textSize', label: 'Schriftgröße', opts: [['normal', 'Normal'], ['big', 'Groß']] },
     { section: 'Hintergrund' },
     { act: 'bgpicker', label: 'Hintergrundbild wählen', icon: 'image', value: () => currentBgName() },
@@ -182,6 +183,7 @@
     b.classList.remove('artclock-big', 'artclock-small');
     if (cfg.artClock !== 'off') b.classList.add('artclock-' + cfg.artClock);
     document.documentElement.style.setProperty('--dim', (Number(cfg.dim) || 0) / 100);
+    document.documentElement.style.setProperty('--uiz', (Number(cfg.uiZoom) || 100) / 100);
     tickClock();
   }
 

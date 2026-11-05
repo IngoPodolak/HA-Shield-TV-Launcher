@@ -74,6 +74,8 @@ body.focus-outline .focused { box-shadow: 0 0 0 .2vw #fff; }
 
 /* ---------- Kopfzeile ---------- */
 #ui { position: fixed; inset: 0; transition: opacity .8s ease; }
+/* Zoom der ganzen Oberfläche (Einstellungen → Darstellung → Zoom); Hintergrund bleibt bildschirmfüllend */
+#ui, #modals, #artclock, #toast { zoom: var(--uiz, 1); }
 #clockbox { position: absolute; top: 5vh; left: 5.5vw; text-shadow: 0 1px 8px rgba(0,0,0,.3); }
 #clock { font-size: calc(2.1vw * var(--scale)); font-weight: 400; letter-spacing: .02em; opacity: .92; }
 #date { font-size: calc(.95vw * var(--scale)); opacity: .7; margin-top: .2vw; }

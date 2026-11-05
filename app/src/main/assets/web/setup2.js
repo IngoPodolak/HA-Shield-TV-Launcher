@@ -155,7 +155,7 @@
     { key: 'clock', label: 'Uhr', opts: [['24', '24 Std.'], ['12', '12 Std.'], ['off', 'Aus']] },
     { key: 'dim', label: 'Hintergrund abdunkeln', opts: [[0, 'Aus'], [10, '10 %'], [20, '20 %'], [30, '30 %'], [45, '45 %']] }
   ];
-  const DEF = { dashZoom: 75, layout: 'dock', material: 'clear', focus: 'glass', iconStyle: 'white', labels: 'on', textSize: 'normal', clock: '24', dim: 10, bgMode: 'fixed', bgId: '01' };
+  const DEF = { dashZoom: 75, uiZoom: 100, layout: 'dock', material: 'clear', focus: 'glass', iconStyle: 'white', labels: 'on', textSize: 'normal', clock: '24', dim: 10, bgMode: 'fixed', bgId: '01' };
   const val = (k) => (state.config[k] !== undefined ? state.config[k] : DEF[k]);
   function set(patch) {
     Object.assign(state.config, patch);
@@ -179,6 +179,8 @@
   function renderDesign() {
     const z = q('#zoom');
     if (z && document.activeElement !== z) { z.value = val('dashZoom'); q('#zoomv').textContent = z.value + ' %'; z.style.setProperty('--p', ((z.value - z.min) / (z.max - z.min) * 100) + '%'); }
+    const u = q('#uiz');
+    if (u && document.activeElement !== u) { u.value = val('uiZoom'); q('#uizv').textContent = u.value + ' %'; u.style.setProperty('--p', ((u.value - u.min) / (u.max - u.min) * 100) + '%'); }
     const cur = currentBgUrl();
     const bgEl = q('#bgimg'); if (cur) bgEl.style.backgroundImage = 'url("' + cur + '")';
 
@@ -252,6 +254,15 @@
     zoomEl.style.setProperty('--p', ((zoomEl.value - zoomEl.min) / (zoomEl.max - zoomEl.min) * 100) + '%');
     clearTimeout(zoomT);
     zoomT = setTimeout(() => { state.config.dashZoom = Number(zoomEl.value); post('/api/config', { dashZoom: Number(zoomEl.value) }); }, 150);
+  });
+
+  const uizEl = q('#uiz');
+  let uizT = null;
+  uizEl.addEventListener('input', () => {
+    q('#uizv').textContent = uizEl.value + ' %';
+    uizEl.style.setProperty('--p', ((uizEl.value - uizEl.min) / (uizEl.max - uizEl.min) * 100) + '%');
+    clearTimeout(uizT);
+    uizT = setTimeout(() => { state.config.uiZoom = Number(uizEl.value); post('/api/config', { uiZoom: Number(uizEl.value) }); }, 150);
   });
 
   // Nach dem Hochladen eigener Fotos die Auswahl neu laden
