@@ -40,7 +40,7 @@ class Bridge(private val activity: MainActivity) {
         start(Intent(Settings.ACTION_MANAGE_OVERLAY_PERMISSION, Uri.parse("package:" + ctx.packageName)))
 
     @JavascriptInterface fun openDashboard() = start(Intent(ctx, DashboardActivity::class.java))
-    @JavascriptInterface fun openBeatify() = start(Intent(ctx, BeatifyActivity::class.java))
+    @JavascriptInterface fun openBeatify() { if (!BeatifyOverlay.show(ctx)) start(Intent(ctx, BeatifyActivity::class.java)) }
 
     @JavascriptInterface fun login(haUrl: String) =
         start(Intent(ctx, LoginActivity::class.java).putExtra("haUrl", haUrl))
