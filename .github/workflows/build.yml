@@ -3,6 +3,7 @@ name: App bauen
 on:
   push:
     branches: [main]
+    paths-ignore: ["roku/**", ".github/workflows/roku.yml"]
   workflow_dispatch:
 
 permissions:
