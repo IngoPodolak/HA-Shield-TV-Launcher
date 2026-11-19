@@ -328,7 +328,7 @@ end sub
 ' Strafpunkte wie in der JS-Bibliothek "qrcode" (N1=3, N2=3, N3=40, N4=10)
 function QrPenalty(q as Object) as Integer
     size = q.size
-    m = q.mods
+    mm = q.mods
     pts = 0
     ' Regel 1: Läufe gleicher Farbe (Zeilen und Spalten)
     for r = 0 to size - 1
@@ -337,7 +337,7 @@ function QrPenalty(q as Object) as Integer
         lastR = invalid
         lastC = invalid
         for c = 0 to size - 1
-            v = m[r][c]
+            v = mm[r][c]
             if lastR <> invalid and v = lastR then
                 sameR = sameR + 1
             else
@@ -345,7 +345,7 @@ function QrPenalty(q as Object) as Integer
                 lastR = v
                 sameR = 1
             end if
-            v = m[c][r]
+            v = mm[c][r]
             if lastC <> invalid and v = lastC then
                 sameC = sameC + 1
             else
@@ -362,10 +362,10 @@ function QrPenalty(q as Object) as Integer
     for r = 0 to size - 2
         for c = 0 to size - 2
             s = 0
-            if m[r][c] then s = s + 1
-            if m[r][c + 1] then s = s + 1
-            if m[r + 1][c] then s = s + 1
-            if m[r + 1][c + 1] then s = s + 1
+            if mm[r][c] then s = s + 1
+            if mm[r][c + 1] then s = s + 1
+            if mm[r + 1][c] then s = s + 1
+            if mm[r + 1][c + 1] then s = s + 1
             if s = 4 or s = 0 then p2 = p2 + 1
         end for
     end for
@@ -377,11 +377,11 @@ function QrPenalty(q as Object) as Integer
         bitsC = 0
         for c = 0 to size - 1
             b = 0
-            if m[r][c] then b = 1
+            if mm[r][c] then b = 1
             bitsR = ((bitsR << 1) and &h7FF) or b
             if c >= 10 and (bitsR = &h5D0 or bitsR = &h05D) then p3 = p3 + 1
             b = 0
-            if m[c][r] then b = 1
+            if mm[c][r] then b = 1
             bitsC = ((bitsC << 1) and &h7FF) or b
             if c >= 10 and (bitsC = &h5D0 or bitsC = &h05D) then p3 = p3 + 1
         end for
@@ -391,7 +391,7 @@ function QrPenalty(q as Object) as Integer
     dark = 0
     for r = 0 to size - 1
         for c = 0 to size - 1
-            if m[r][c] then dark = dark + 1
+            if mm[r][c] then dark = dark + 1
         end for
     end for
     pct = (dark * 100#) / (size * size)
