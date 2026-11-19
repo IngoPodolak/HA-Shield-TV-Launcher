@@ -1,0 +1,64 @@
+name: Roku-App bauen
+
+on:
+  push:
+    paths: ["roku/**", ".github/workflows/roku.yml"]
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Werkzeuge
+        run: |
+          npm i -g brighterscript@0 @rokucommunity/brs@0
+          pip install opencv-python-headless numpy
+      - name: BrightScript prüfen
+        working-directory: roku
+        run: |
+          set +e
+          bsc --project bsconfig.json > bsc.log 2>&1
+          code=$?
+          cat bsc.log
+          if [ $code -ne 0 ]; then
+            msg=$(grep -iE "error" bsc.log | head -40 | sed ':a;N;$!ba;s/\n/%0A/g')
+            echo "::error title=bsc::$msg"
+            exit 1
+          fi
+      - name: QR-Code testen
+        working-directory: roku
+        run: |
+          set +e
+          brs components/Qr.brs tests/qr_test.brs > qr.out 2> qr.err
+          python tests/qr_compare.py < qr.out > qr.res 2>&1
+          code=$?
+          cat qr.err qr.res
+          if [ $code -ne 0 ]; then
+            msg=$( (head -c 1500 qr.err; head -c 1500 qr.res) | sed ':a;N;$!ba;s/\n/%0A/g')
+            echo "::error title=qr::$msg"
+            exit 1
+          fi
+      - name: Paket packen
+        working-directory: roku
+        run: |
+          sed -i "s/^build_version=.*/build_version=${GITHUB_RUN_NUMBER}/" manifest
+          zip -r -9 ../beatify-tv-roku.zip manifest source components images
+      - uses: actions/upload-artifact@v4
+        with:
+          name: beatify-tv-roku
+          path: beatify-tv-roku.zip
+      - name: Veröffentlichen
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          gh release create "roku-v${GITHUB_RUN_NUMBER}" beatify-tv-roku.zip --title "Beatify TV für Roku v${GITHUB_RUN_NUMBER}" --notes "Roku-App (Entwicklermodus). Installation: ZIP über den Browser auf http://<Roku-IP> hochladen." --latest=false

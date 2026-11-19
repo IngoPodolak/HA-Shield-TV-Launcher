@@ -1,0 +1,20 @@
+<?xml version="1.0" encoding="utf-8"?>
+<component name="MainScene" extends="Scene">
+  <children>
+    <Rectangle id="bg" width="1920" height="1080" color="#0b0b14" />
+    <Rectangle id="glow1" width="1920" height="540" color="#1a1236" opacity="0.55" />
+    <Rectangle id="glow2" translation="[0,880]" width="1920" height="200" color="#0f2236" opacity="0.5" />
+    <Group id="view" />
+    <Label id="conn" translation="[60,1028]" width="1200" height="36" color="#7d7d95" text="">
+      <Font role="font" uri="font:SystemFontFile" size="24" />
+    </Label>
+    <Label id="hint" translation="[1060,1028]" width="800" height="36" horizAlign="right" color="#55556a" text="Taste * : Adresse ändern">
+      <Font role="font" uri="font:SystemFontFile" size="22" />
+    </Label>
+    <Audio id="music" />
+    <Audio id="voice" />
+    <Timer id="tick" repeat="true" duration="0.25" />
+  </children>
+  <script type="text/brightscript" uri="pkg:/components/Qr.brs" />
+  <script type="text/brightscript" uri="pkg:/components/MainScene.brs" />
+</component>

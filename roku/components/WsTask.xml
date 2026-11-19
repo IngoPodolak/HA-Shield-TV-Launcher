@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="utf-8"?>
+<component name="WsTask" extends="Task">
+  <interface>
+    <field id="url" type="string" />
+    <field id="outbox" type="string" alwaysNotify="true" />
+    <field id="inbox" type="string" alwaysNotify="true" />
+    <field id="status" type="string" value="idle" />
+  </interface>
+  <script type="text/brightscript" uri="pkg:/components/WsTask.brs" />
+</component>
