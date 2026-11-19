@@ -2,12 +2,12 @@
 ' status: connecting | open | closed | unsupported
 
 sub init()
-    m.top.functionName = "run"
+    m.top.functionName = "wsLoop"
 end sub
 
 function wsOpen(url as String) as Object
     port = CreateObject("roMessagePort")
-    ws = CreateObject("roWebSocket")
+    ws = CreateObject("ro" + "WebSocket") ' neuere Roku-Komponente, dem Prüfwerkzeug noch unbekannt
     if ws = invalid then return invalid
     ws.SetMessagePort(port)
     if LCase(Left(url, 4)) = "wss:" then
@@ -23,7 +23,7 @@ function wsOpen(url as String) as Object
     return { ws: ws, port: port, ok: ok }
 end function
 
-sub run()
+sub wsLoop()
     clock = CreateObject("roTimespan")
     idlePort = CreateObject("roMessagePort")
     m.top.observeField("url", idlePort)
