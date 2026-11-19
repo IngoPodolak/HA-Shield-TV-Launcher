@@ -31,7 +31,7 @@ object BeatifyOverlay {
     fun fitJs(ctx: android.content.Context): String {
         val z = Config.get(ctx).optInt("beatZoom", 100).coerceIn(50, 200)
         val w = Math.round(1920 * 100.0 / z)
-        return "(function(){var m=document.querySelector('meta[name=viewport]');if(!m){m=document.createElement('meta');m.name='viewport';document.head.appendChild(m);}var s=(screen.width||960)/$w;m.content='width=$w,initial-scale='+s+',minimum-scale='+s+',maximum-scale='+s+',user-scalable=no';})()"
+        return "(function(){var m=document.querySelector('meta[name=viewport]');if(!m){m=document.createElement('meta');m.name='viewport';document.head.appendChild(m);}var s=(screen.width||960)/$w;m.content='width=$w,initial-scale='+s+',minimum-scale='+s+',maximum-scale='+s+',user-scalable=no';if(!window.__tvSound){window.__tvSound=setInterval(function(){var b=document.getElementById('dashboard-sound-gate-btn');if(b&&b.offsetParent!==null){b.click();}},1500);}})()"
     }
 
 
